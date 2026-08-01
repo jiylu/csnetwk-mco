@@ -1,0 +1,14 @@
+lightning_bolt_001
+lightning_bolt_002
+lightning_bolt_003
+shock_001
+shock_002
+goblin_guide_001
+goblin_guide_002
+reckless_wurm_001
+mountain_001
+mountain_002
+mountain_003
+mountain_004
+mountain_005
+mountain_006

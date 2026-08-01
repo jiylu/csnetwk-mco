@@ -1,0 +1,14 @@
+counterspell_001
+counterspell_002
+gray_merchant_001
+gray_merchant_002
+wall_of_stone_001
+healing_salve_001
+divination_001
+island_001
+island_002
+island_003
+swamp_001
+swamp_002
+swamp_003
+plains_001

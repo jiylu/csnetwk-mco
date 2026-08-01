@@ -1,0 +1,45 @@
+{
+  "_comment": "MTGNP shared card catalog. Card instance IDs in PDUs are '<base>_<nnn>'; the base is the key here.",
+
+  "mountain":      { "name": "Mountain",  "kind": "land", "produces": "R" },
+  "island":        { "name": "Island",    "kind": "land", "produces": "U" },
+  "swamp":         { "name": "Swamp",     "kind": "land", "produces": "B" },
+  "forest":        { "name": "Forest",    "kind": "land", "produces": "G" },
+  "plains":        { "name": "Plains",    "kind": "land", "produces": "W" },
+
+  "goblin_guide":  { "name": "Goblin Guide",  "kind": "creature", "cost": { "R": 1 },
+                     "power": 2, "toughness": 2, "haste": true },
+  "grizzly_bears": { "name": "Grizzly Bears", "kind": "creature", "cost": { "G": 1, "X": 1 },
+                     "power": 2, "toughness": 2 },
+  "wall_of_stone": { "name": "Wall of Stone", "kind": "creature", "cost": { "R": 1, "X": 2 },
+                     "power": 0, "toughness": 8 },
+  "reckless_wurm": { "name": "Reckless Wurm", "kind": "creature", "cost": { "R": 2, "X": 2 },
+                     "power": 4, "toughness": 4 },
+  "youthful_knight": { "name": "Youthful Knight", "kind": "creature", "cost": { "W": 1, "X": 1 },
+                     "power": 2, "toughness": 1, "first_strike": true },
+
+  "gray_merchant": { "name": "Gray Merchant of Asphodel", "kind": "creature",
+                     "cost": { "B": 2, "X": 3 }, "power": 2, "toughness": 4,
+                     "etb_trigger": { "effect": "drain", "amount": 2, "optional": true,
+                       "summary": "When Gray Merchant of Asphodel enters the battlefield, each opponent loses 2 life and you gain 2 life." } },
+
+  "festering_imp": { "name": "Festering Imp", "kind": "creature",
+                     "cost": { "B": 1 }, "power": 1, "toughness": 1,
+                     "death_trigger": { "effect": "opp_lose", "amount": 1, "optional": false,
+                       "summary": "When Festering Imp dies, each opponent loses 1 life." } },
+
+  "lightning_bolt": { "name": "Lightning Bolt", "kind": "instant", "cost": { "R": 1 },
+                      "effect": "damage", "amount": 3, "needs_target": true },
+  "shock":          { "name": "Shock", "kind": "instant", "cost": { "R": 1 },
+                      "effect": "damage", "amount": 2, "needs_target": true },
+  "counterspell":   { "name": "Counterspell", "kind": "instant", "cost": { "U": 2 },
+                      "effect": "counter", "needs_target": true, "targets_stack": true },
+  "giant_growth":   { "name": "Giant Growth", "kind": "instant", "cost": { "G": 1 },
+                      "effect": "pump", "power": 3, "toughness": 3, "needs_target": true,
+                      "targets_creature": true },
+  "healing_salve":  { "name": "Healing Salve", "kind": "instant", "cost": { "W": 1 },
+                      "effect": "lifegain", "amount": 3, "needs_target": true },
+
+  "divination":     { "name": "Divination", "kind": "sorcery", "cost": { "U": 1, "X": 2 },
+                      "effect": "draw", "amount": 2, "needs_target": false }
+}
