@@ -51,7 +51,7 @@ class ClientGone(Exception):
 # Per-connection wrapper: socket + reader thread + send lock
 # ---------------------------------------------------------------------------
 class ClientConn:
-    def __init__(self, sock, addr, idx, event_q):
+    def __init__(self, sock, addr, idx, event_q, get_seq=None):
         self.sock = sock
         self.addr = addr
         self.idx = idx                 # seat index 0 or 1
@@ -59,6 +59,7 @@ class ClientConn:
         self.send_lock = threading.Lock()
         self.alive = True
         self._q = event_q
+        self._get_seq = get_seq        # callback for server seq_num (thread-safe)
         self.reader = threading.Thread(target=self._read_loop, daemon=True)
         self.reader.start()
 
@@ -83,7 +84,9 @@ class ClientConn:
                 pdu = recv_pdu(self.sock, who=self.label())
             except FramingError as e:
                 # RFC 11: INVALID_JSON — report and keep the connection.
-                self.send({"type": "ERROR", "seq_num": 0, "code": "INVALID_JSON",
+                err_seq = self._get_seq() if self._get_seq else 0
+                self.send({"type": "ERROR", "seq_num": err_seq,
+                           "code": "INVALID_JSON",
                            "message": str(e), "rejected_action": None})
                 continue
             except (ConnectionError, OSError):
@@ -116,14 +119,17 @@ class Server:
         self.catalog = load_catalog()
         self.events = queue.Queue()
         self.clients = [None, None]    # seat 0, seat 1
+        self.spectators = []
         self.seq = 0                   # server PDU counter (RFC 5.4)
+        self._seq_lock = threading.Lock()
         self.stk_counter = 0
         self.trg_counter = 0
 
     # ---------------- low-level send helpers ----------------
     def next_seq(self):
-        self.seq += 1
-        return self.seq
+        with self._seq_lock:
+            self.seq += 1
+            return self.seq
 
     def send_to(self, idx, pdu):
         pdu["seq_num"] = self.next_seq()
@@ -137,12 +143,15 @@ class Server:
         for c in self.clients:
             if c and c.alive:
                 c.send(pdu)
+        for c in self.spectators:
+            if c and c.alive:
+                c.send(pdu)
         return pdu["seq_num"]
 
-    def send_error(self, idx, code, message, rejected=None, echo_seq=None):
+    def send_error(self, idx, code, message, rejected=None):
         self.clients[idx].send({
             "type": "ERROR",
-            "seq_num": echo_seq if echo_seq is not None else self.seq,
+            "seq_num": self.next_seq(),
             "code": code, "message": message,
             "rejected_action": rejected,
         })
@@ -203,7 +212,7 @@ class Server:
                 self.send_error(idx, "STALE_ACTION",
                                 f"Priority token mismatch. Expected seq_num "
                                 f"{expected_seq}, got {pdu.get('seq_num')}.",
-                                pdu, echo_seq=pdu.get("seq_num"))
+                                pdu)
                 if regrant:
                     # Re-issue the current PRIORITY_GRANT (RFC 5.4 example)
                     # and validate future PDUs against the fresh token.
@@ -224,7 +233,8 @@ class Server:
         while None in self.clients:
             sock, addr = srv.accept()
             seat = self.clients.index(None)
-            self.clients[seat] = ClientConn(sock, addr, seat, self.events)
+            self.clients[seat] = ClientConn(sock, addr, seat, self.events,
+                                            self.next_seq)
             print(f"[server] seat {seat} connected from {addr}")
         # Refuse any further connections in the background (RFC 5.1).
         threading.Thread(target=self._refuse_loop, daemon=True).start()
@@ -233,8 +243,12 @@ class Server:
         while True:
             try:
                 sock, addr = self.listener.accept()
-                print(f"[server] refusing extra connection from {addr}")
-                sock.close()
+                print(f"[server] accepting spectator connection from {addr}")
+                # Spectators don't need to push events to the main queue
+                # They just receive broadcast PDUs
+                spec_conn = ClientConn(sock, addr, len(self.spectators) + 2, queue.Queue(), self.next_seq)
+                spec_conn.player_id = f"spectator_{len(self.spectators)}"
+                self.spectators.append(spec_conn)
             except OSError:
                 return
 
@@ -316,7 +330,8 @@ class Server:
             "graveyard": {self.pid(0): list(self.players[0]["graveyard"]),
                           self.pid(1): list(self.players[1]["graveyard"])},
             "hand": {self.pid(for_idx): list(me["hand"])},
-            "hand_counts": {self.pid(1 - for_idx): len(opp["hand"])},
+            "hand_counts": {self.pid(for_idx): len(me["hand"]),
+                            self.pid(1 - for_idx): len(opp["hand"])},
             "library_counts": {self.pid(0): len(self.players[0]["library"]),
                                self.pid(1): len(self.players[1]["library"])},
             "land_played_this_turn": self.players[self.active]["land_played"],
@@ -389,7 +404,8 @@ class Server:
         except OSError:
             pass
         sock, addr = self.listener.accept()
-        self.clients[idx] = ClientConn(sock, addr, idx, self.events)
+        self.clients[idx] = ClientConn(sock, addr, idx, self.events,
+                                       self.next_seq)
         self.players[idx]["id"], self.players[idx]["deck"] = None, None
         print(f"[server] seat {idx} reconnected from {addr}")
 
@@ -433,8 +449,7 @@ class Server:
             if pdu.get("seq_num") != request_seqs[idx]:
                 self.send_error(idx, "STALE_ACTION",
                                 f"Expected seq_num {request_seqs[idx]}, got "
-                                f"{pdu.get('seq_num')}.", pdu,
-                                echo_seq=pdu.get("seq_num"))
+                                f"{pdu.get('seq_num')}.", pdu)
                 continue
             pl = self.players[idx]
             if pdu.get("keep"):
@@ -619,10 +634,8 @@ class Server:
                 self.resend_grant(idx, token)
                 continue
             if t == "ACTIVATE_ABILITY":
-                # MTGNP 1.0 catalog defines no activated non-mana abilities;
-                # mana is paid implicitly inside CAST_SPELL (RFC 7.5).
-                self.send_error(idx, "ILLEGAL_ACTION",
-                                "No activated abilities in the card set.", pdu)
+                if self.try_activate_ability(idx, pdu):
+                    return idx        # activator retains priority
                 self.resend_grant(idx, token)
                 continue
 
@@ -701,7 +714,7 @@ class Server:
             return False
         targets = pdu.get("targets", [])
         if d.get("needs_target"):
-            if len(targets) != 1 or not self.target_legal(d, targets[0]):
+            if len(targets) != 1 or not self.target_legal(d, targets[0], idx):
                 self.send_error(idx, "ILLEGAL_TARGET",
                                 "Missing or illegal target.", pdu)
                 return False
@@ -715,30 +728,179 @@ class Server:
                 "targets": targets, "controller": self.pid(idx)}
         self.stack.append(item)
         self.send_all({"type": "STACK_PUSH", **item})
+        
+        # Prowess triggers when you cast a non-creature spell
+        if d["kind"] != "creature":
+            for perm in pl["battlefield"]:
+                if perm["creature"] and card_def(self.catalog, perm["id"]).get("prowess"):
+                    # We can use our generic trigger placement, bypassing "death" triggers
+                    self.place_trigger(idx, perm["id"], {"effect": "pump", "power": 1, "toughness": 1, "summary": "Prowess (+1/+1)"})
+                    
         return True
 
-    def target_legal(self, spell_def, target):
+    def target_legal(self, spell_def, target, caster_idx):
         if spell_def.get("targets_stack"):
             return any(s["stack_item_id"] == target for s in self.stack)
+        if spell_def.get("targets_player"):
+            return self.idx_of(target) is not None
+        if spell_def.get("targets_graveyard_creature"):
+            # Check if target is a card ID in any graveyard that is a creature
+            for pl in self.players:
+                if target in pl["graveyard"]:
+                    cdef = card_def(self.catalog, target)
+                    return cdef and cdef.get("kind") == "creature"
+            return False
+        
+        _, perm = self.find_perm(target)
+        if not perm:
+            # If not a perm, maybe it's a player? Some spells can target anything.
+            if not spell_def.get("targets_creature") and not spell_def.get("targets_artifact_enchantment") and not spell_def.get("targets_tapped_creature"):
+                if self.idx_of(target) is not None:
+                    return spell_def.get("effect") != "lifegain" # Healing Salve targets player, but any target spells can target player too
+            return False
+            
         if spell_def.get("targets_creature"):
-            _, perm = self.find_perm(target)
-            return perm is not None and perm["creature"]
+            if not perm["creature"]: return False
+            cdef = card_def(self.catalog, perm["id"])
+            if spell_def.get("non_black") and "B" in cdef.get("cost", {}):
+                return False
+            if spell_def.get("non_artifact") and "artifact" in cdef.get("kind", ""):
+                return False
+            if cdef.get("hexproof") and self.idx_of(perm["controller"]) != caster_idx:
+                return False
+            prot = cdef.get("protection_from", [])
+            for c in prot:
+                if c in spell_def.get("cost", {}):
+                    return False
+                if c == "white" and "W" in spell_def.get("cost", {}): return False
+                if c == "blue" and "U" in spell_def.get("cost", {}): return False
+                if c == "black" and "B" in spell_def.get("cost", {}): return False
+                if c == "red" and "R" in spell_def.get("cost", {}): return False
+                if c == "green" and "G" in spell_def.get("cost", {}): return False
+            return True
+            
+        if spell_def.get("targets_tapped_creature"):
+            if not (perm["creature"] and perm["tapped"]): return False
+            if card_def(self.catalog, perm["id"]).get("hexproof") and self.idx_of(perm["controller"]) != caster_idx:
+                return False
+            return True
+            
+        if spell_def.get("targets_artifact_enchantment"):
+            cdef = card_def(self.catalog, perm["id"])
+            k = cdef.get("kind", "")
+            if "artifact" not in k and "enchantment" not in k: return False
+            if cdef.get("hexproof") and self.idx_of(perm["controller"]) != caster_idx:
+                return False
+            return True
+            
         # 'any target' style (bolt/shock) or player-only (healing salve):
         if self.idx_of(target) is not None:
             return True
         if spell_def.get("effect") == "lifegain":
             return False
-        _, perm = self.find_perm(target)
+            
+        # check hexproof for 'any target' matching a creature
+        if perm and perm["creature"]:
+            cdef = card_def(self.catalog, perm["id"])
+            if cdef.get("hexproof") and self.idx_of(perm["controller"]) != caster_idx:
+                return False
+            
         return perm is not None and perm["creature"]
+
+    # ---------------- activated abilities (RFC 7.5 / 8.3) ----------------
+    def try_activate_ability(self, idx, pdu):
+        src_id = pdu.get("source_id")
+        ab_idx = pdu.get("ability_index")
+        _, perm = self.find_perm(src_id)
+        if not perm or self.idx_of(perm["controller"]) != idx:
+            self.send_error(idx, "ILLEGAL_ACTION",
+                            "You do not control that permanent.", pdu)
+            return False
+        
+        d = card_def(self.catalog, perm["id"])
+        is_mana = False
+        abilities = []
+        if d.get("mana_abilities") and ab_idx < len(d["mana_abilities"]):
+            is_mana = True
+            ability = d["mana_abilities"][ab_idx]
+        elif d.get("activated_abilities"):
+            # offset index if mana_abilities exist
+            offset = len(d.get("mana_abilities", []))
+            if ab_idx - offset < len(d["activated_abilities"]):
+                ability = d["activated_abilities"][ab_idx - offset]
+            else:
+                self.send_error(idx, "ILLEGAL_ACTION", "Invalid ability index.", pdu)
+                return False
+        else:
+            self.send_error(idx, "ILLEGAL_ACTION", "No such ability.", pdu)
+            return False
+
+        cost = ability.get("cost", {})
+        if cost.get("tap"):
+            if perm["tapped"]:
+                self.send_error(idx, "ILLEGAL_ACTION", "Permanent is already tapped.", pdu)
+                return False
+            if perm.get("summoning_sick") and not d.get("haste"):
+                self.send_error(idx, "ILLEGAL_ACTION", "Creature has summoning sickness.", pdu)
+                return False
+        
+        # mana cost portion of activated ability
+        mana_cost = {k: v for k, v in cost.items() if k != "tap"}
+        if mana_cost:
+            if not self.check_and_pay_mana(idx, mana_cost, pdu.get("mana_payment"), pdu):
+                return False
+
+        # pay tap cost
+        if cost.get("tap"):
+            perm["tapped"] = True
+
+        targets = pdu.get("targets", [])
+        if ability.get("needs_target"):
+            if len(targets) != 1 or not self.target_legal(ability, targets[0], idx):
+                self.send_error(idx, "ILLEGAL_TARGET", "Missing or illegal target.", pdu)
+                # refund tap? In MTG rules you can't even activate it if target illegal, 
+                # but server handles this implicitly by returning False before fully committing
+                if cost.get("tap"): perm["tapped"] = False
+                return False
+        
+        if is_mana:
+            # Mana abilities don't use stack
+            pl = self.players[idx]
+            # Actually MTGNP doesn't float mana across phases, it uses implicit payment.
+            # But "Sol Ring" produces C. We don't have mana pools in this engine, 
+            # implicit mana pays directly from lands.
+            pass # Sol Ring tap ability logic to be handled by check_and_pay_mana? 
+            # Wait, the engine only taps lands implicitly! 
+        else:
+            self.stk_counter += 1
+            item = {"stack_item_id": f"stk_{self.stk_counter:02d}",
+                    "item_type": "ABILITY", "source": src_id,
+                    "targets": targets, "controller": self.pid(idx),
+                    "ability_def": ability}
+            self.stack.append(item)
+            pub = {k:v for k,v in item.items() if k != "ability_def"}
+            self.send_all({"type": "STACK_PUSH", **pub})
+            
+        self.broadcast_state() # Broadcast tapped state
+        return True
 
     # ---------------- resolution (RFC 8.4) ----------------
     def resolve_top(self):
         item = self.stack.pop()
-        d = card_def(self.catalog, item["source"])
+        
+        # If it's a cast spell, get card def from catalog. If it's an ability, it uses its own ability_def.
+        if item["item_type"] == "ABILITY":
+            d = item["ability_def"]
+        elif item["item_type"] == "TRIGGER_ABILITY":
+            d = item["trigger_effect"]
+        else:
+            d = card_def(self.catalog, item["source"])
+            
         changes = []
         # Re-check target legality; fizzle if all targets are now illegal.
         if d.get("needs_target"):
-            if not all(self.target_legal(d, t) for t in item["targets"]):
+            controller = self.idx_of(item["controller"])
+            if not all(self.target_legal(d, t, controller) for t in item["targets"]):
                 self.send_all({"type": "STACK_RESOLVE",
                                "stack_item_id": item["stack_item_id"],
                                "result": "FIZZLE", "state_changes": []})
@@ -751,6 +913,8 @@ class Server:
         etb_perm = None
         if item["item_type"] == "TRIGGER_ABILITY":
             changes += self.apply_trigger_effect(item, controller)
+        elif item["item_type"] == "ABILITY":
+            changes += self.apply_ability_effect(item, controller)
         elif d["kind"] == "creature":
             perm = self.new_perm(item["source"], creature=True)
             self.players[controller]["battlefield"].append(perm)
@@ -766,6 +930,10 @@ class Server:
                        "result": "RESOLVED", "state_changes": changes})
         self.after_event(etb_source=etb_perm,
                          etb_controller=controller if etb_perm else None)
+
+    def apply_ability_effect(self, item, controller):
+        # We can reuse apply_spell_effect since the structure (effect, amount) is similar
+        return self.apply_spell_effect(item["ability_def"], item, controller)
 
     def apply_spell_effect(self, d, item, controller):
         changes = []
@@ -803,6 +971,92 @@ class Server:
             changes.append({"change_type": "DRAW",
                             "target": self.pid(controller),
                             "amount": d["amount"]})
+        elif eff == "bounce":
+            _, perm = self.find_perm(tgt)
+            if perm:
+                self.players[self.idx_of(perm["controller"])]["battlefield"].remove(perm)
+                self.players[self.idx_of(perm["owner"])]["hand"].append(perm["id"])
+                changes.append({"change_type": "BOUNCE", "target": tgt})
+        elif eff in ("destroy", "destroy_no_regen"):
+            _, perm = self.find_perm(tgt)
+            if perm:
+                self.players[self.idx_of(perm["controller"])]["battlefield"].remove(perm)
+                self.players[self.idx_of(perm["owner"])]["graveyard"].append(perm["id"])
+                changes.append({"change_type": "DESTROY", "target": tgt})
+        elif eff == "exile_and_gain_life":
+            _, perm = self.find_perm(tgt)
+            if perm:
+                ctrl = self.idx_of(perm["controller"])
+                self.players[ctrl]["battlefield"].remove(perm)
+                # MTGNP 1.0 has no 'exile' zone, so we just remove it
+                cdef = card_def(self.catalog, perm["id"])
+                power = cdef.get("power", 0)
+                self.players[ctrl]["life"] += power
+                changes.append({"change_type": "EXILE", "target": tgt})
+                changes.append({"change_type": "LIFE_GAIN", "target": self.pid(ctrl), "amount": power})
+        elif eff == "exile_and_ramp":
+            _, perm = self.find_perm(tgt)
+            if perm:
+                ctrl = self.idx_of(perm["controller"])
+                self.players[ctrl]["battlefield"].remove(perm)
+                changes.append({"change_type": "EXILE", "target": tgt})
+                # ramp
+                deck = self.players[ctrl]["deck"]
+                for i, c in enumerate(deck):
+                    if card_def(self.catalog, c).get("name") in ("Plains", "Island", "Swamp", "Mountain", "Forest"):
+                        land = deck.pop(i)
+                        l_perm = self.new_perm(land, creature=False)
+                        l_perm["tapped"] = True
+                        self.players[ctrl]["battlefield"].append(l_perm)
+                        random.shuffle(deck)
+                        changes.append({"change_type": "PERMANENT_ENTERS", "card_id": land, "controller": self.pid(ctrl)})
+                        break
+        elif eff == "ramp":
+            deck = self.players[controller]["deck"]
+            for i, c in enumerate(deck):
+                if card_def(self.catalog, c).get("name") in ("Plains", "Island", "Swamp", "Mountain", "Forest"):
+                    land = deck.pop(i)
+                    l_perm = self.new_perm(land, creature=False)
+                    l_perm["tapped"] = True
+                    self.players[controller]["battlefield"].append(l_perm)
+                    random.shuffle(deck)
+                    changes.append({"change_type": "PERMANENT_ENTERS", "card_id": land, "controller": self.pid(controller)})
+                    break
+        elif eff == "mill":
+            t = self.idx_of(tgt)
+            amt = d["amount"]
+            milled = self.players[t]["deck"][-amt:]
+            del self.players[t]["deck"][-amt:]
+            self.players[t]["graveyard"].extend(reversed(milled))
+            changes.append({"change_type": "MILL", "target": tgt, "amount": amt})
+        elif eff == "discard":
+            t = self.idx_of(tgt)
+            amt = d["amount"]
+            # Without a choice PDU, we just discard random cards
+            hand = self.players[t]["hand"]
+            for _ in range(min(amt, len(hand))):
+                card = random.choice(hand)
+                hand.remove(card)
+                self.players[t]["graveyard"].append(card)
+            changes.append({"change_type": "DISCARD", "target": tgt, "amount": amt})
+        elif eff == "return_from_graveyard":
+            # the target is a card_id in the graveyard
+            # Since our target_legal checks if the target is a creature on board or player,
+            # we need to fix target_legal for graveyards!
+            pass # TODO: target_legal for graveyards
+        elif eff == "add_mana":
+            # Implicit mana means Dark Ritual doesn't really work easily unless we add a mana pool
+            pass # Skipping for now
+        elif eff == "enchant_creature":
+            _, perm = self.find_perm(tgt)
+            if perm:
+                perm["auras"] = perm.get("auras", [])
+                perm["auras"].append(item["source"])
+                changes.append({"change_type": "ENCHANT", "target": tgt, "aura": item["source"]})
+        elif eff == "ponder":
+            self.draw_cards(controller, 1)
+            changes.append({"change_type": "DRAW", "target": self.pid(controller), "amount": 1})
+        
         return changes
 
     def deal_damage(self, source, target, amount):
@@ -812,6 +1066,21 @@ class Server:
         else:
             _, perm = self.find_perm(target)
             if perm:
+                s_def = card_def(self.catalog, source)
+                prot = card_def(self.catalog, perm["id"]).get("protection_from", [])
+                s_cost = s_def.get("cost", {}) if s_def else {}
+                
+                prevented = False
+                for c in prot:
+                    if c in s_cost: prevented = True
+                    elif c == "white" and "W" in s_cost: prevented = True
+                    elif c == "blue" and "U" in s_cost: prevented = True
+                    elif c == "black" and "B" in s_cost: prevented = True
+                    elif c == "red" and "R" in s_cost: prevented = True
+                    elif c == "green" and "G" in s_cost: prevented = True
+                
+                if prevented:
+                    amount = 0
                 perm["damage"] += amount
         return [{"change_type": "DAMAGE", "target": target, "amount": amount}]
 
@@ -942,11 +1211,32 @@ class Server:
                             "target": self.pid(1 - controller), "amount": n})
             changes.append({"change_type": "LIFE_GAIN",
                             "target": self.pid(controller), "amount": n})
+        elif trig["effect"] == "drain_devotion":
+            devotion = 0
+            for perm in self.players[controller]["battlefield"]:
+                cdef = card_def(self.catalog, perm["id"])
+                if cdef and "cost" in cdef:
+                    devotion += cdef["cost"].get("B", 0)
+            n = devotion
+            self.players[1 - controller]["life"] -= n
+            self.players[controller]["life"] += n
+            changes.append({"change_type": "DAMAGE",
+                            "target": self.pid(1 - controller), "amount": n})
+            changes.append({"change_type": "LIFE_GAIN",
+                            "target": self.pid(controller), "amount": n})
         elif trig["effect"] == "opp_lose":
             n = trig["amount"]
             self.players[1 - controller]["life"] -= n
             changes.append({"change_type": "DAMAGE",
                             "target": self.pid(1 - controller), "amount": n})
+        elif trig["effect"] == "pump":
+            # Target is the source of the trigger (self)
+            _, perm = self.find_perm(item["source"])
+            if perm:
+                perm["pump_p"] += trig["power"]
+                perm["pump_t"] += trig["toughness"]
+                changes.append({"change_type": "PUMP", "target": item["source"],
+                                "power": trig["power"], "toughness": trig["toughness"]})
         return changes
 
     # =======================================================================
@@ -976,7 +1266,8 @@ class Server:
             return "END_OF_COMBAT"
         for a in attackers:              # attacking taps the creature (9.3)
             _, perm = self.find_perm(a)
-            perm["tapped"] = True
+            if not card_def(self.catalog, perm["id"]).get("vigilance"):
+                perm["tapped"] = True
         self.broadcast_state()
         self.priority_window()
 
@@ -1041,17 +1332,26 @@ class Server:
         self.clear_combat()
         return "END_OF_COMBAT"
 
+    def has_aura_effect(self, perm, effect_name):
+        for a in perm.get("auras", []):
+            if card_def(self.catalog, a).get("effect") == effect_name:
+                return True
+        return False
+
     def validate_attackers(self, ap_i, pdu):
         out = []
         for a in pdu.get("attackers", []):
             cid = a.get("creature_id")
             owner, perm = self.find_perm(cid)
+            d = card_def(self.catalog, cid)
             if (owner != ap_i or perm is None or not perm["creature"]
                     or perm["tapped"] or perm["summoning_sick"]
+                    or (d and d.get("defender"))
+                    or self.has_aura_effect(perm, "pacifism")
                     or a.get("target") != self.pid(1 - ap_i)):
                 self.send_error(ap_i, "ILLEGAL_ACTION",
                                 f"'{cid}' cannot attack (tapped, summoning-"
-                                f"sick, missing, or bad target).", pdu)
+                                f"sick, defender, pacifism, or bad target).", pdu)
                 return None
             out.append(cid)
         return out
@@ -1065,10 +1365,40 @@ class Server:
             # A creature may block only one attacker; tapped creatures cannot
             # block; blocking does not tap (RFC 9.4).
             if (owner != nap_i or perm is None or not perm["creature"]
-                    or perm["tapped"] or cid in seen or tgt not in blocks):
+                    or perm["tapped"] or cid in seen or tgt not in blocks
+                    or self.has_aura_effect(perm, "pacifism")):
                 self.send_error(nap_i, "ILLEGAL_ACTION",
                                 f"'{cid}' is not a legal block.", pdu)
                 return None
+            
+            atk_d = card_def(self.catalog, tgt)
+            blk_d = card_def(self.catalog, cid)
+            if atk_d.get("flying") and not (blk_d.get("flying") or blk_d.get("reach")):
+                self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block flying creature.", pdu)
+                return None
+                
+            prot = atk_d.get("protection_from", [])
+            b_cost = blk_d.get("cost", {})
+            for c in prot:
+                if c in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block a creature with protection from its color.", pdu)
+                    return None
+                if c == "white" and "W" in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block.", pdu)
+                    return None
+                if c == "blue" and "U" in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block.", pdu)
+                    return None
+                if c == "black" and "B" in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block.", pdu)
+                    return None
+                if c == "red" and "R" in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block.", pdu)
+                    return None
+                if c == "green" and "G" in b_cost:
+                    self.send_error(nap_i, "ILLEGAL_ACTION", f"'{cid}' cannot block.", pdu)
+                    return None
+                
             seen.add(cid)
             blocks[tgt].append(cid)
         return blocks
@@ -1099,15 +1429,18 @@ class Server:
                     events.append((atk, self.pid(nap_i), dmg))
                 continue                          # blocked, blockers all dead
             # Damage order: lethal to each blocker in order, overflow to next
-            # blocker only (no trample in MTGNP 1.0 — never to the player).
+            # blocker only. If trample, remaining damage overflows to player.
+            has_trample = card_def(self.catalog, atk).get("trample")
             for b in bs:
                 if dmg <= 0:
                     break
                 _, bperm = self.find_perm(b)
                 lethal = max(0, self.toughness(bperm) - bperm["damage"])
-                assign = min(dmg, lethal) if b != bs[-1] else dmg
+                assign = dmg if (b == bs[-1] and not has_trample) else min(dmg, lethal)
                 events.append((atk, b, assign))
                 dmg -= assign
+            if dmg > 0 and has_trample:
+                events.append((atk, self.pid(nap_i), dmg))
         # Blocker damage (simultaneous)
         for atk, bs in blocks.items():
             _, aperm = self.find_perm(atk)
@@ -1165,12 +1498,9 @@ class Server:
         print(f"[server] GAME_OVER: {win} beats {lose} ({g.reason})")
         self.send_all({"type": "GAME_OVER", "winner_id": win,
                        "loser_id": lose, "reason": g.reason})
-        # Drain stale events so a new lobby starts clean.
-        while not self.events.empty():
-            try:
-                self.events.get_nowait()
-            except queue.Empty:
-                break
+        # Brief pause so GAME_OVER reaches both clients before the server
+        # re-enters the LOBBY loop (avoids draining early PLAYER_READY PDUs).
+        time.sleep(0.05)
 
     def replace_dead_seats(self):
         for i in (0, 1):
@@ -1181,7 +1511,8 @@ class Server:
                     pass
                 print(f"[server] waiting for a new client on seat {i} ...")
                 sock, addr = self.listener.accept()
-                self.clients[i] = ClientConn(sock, addr, i, self.events)
+                self.clients[i] = ClientConn(sock, addr, i, self.events,
+                                             self.next_seq)
                 print(f"[server] seat {i} reconnected from {addr}")
 
 

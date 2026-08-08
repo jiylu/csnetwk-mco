@@ -163,6 +163,8 @@ class Client:
                         tag += f" dmg{p['damage']}"
                     if p.get("summoning_sick"):
                         tag += " sick"
+                if p.get("auras"):
+                    tag += f" auras={p['auras']}"
                 row.append(f"{p['id']}({tag})")
             print(f" battlefield[{pid}]: {row}")
         if s.get("stack"):
@@ -276,6 +278,13 @@ class Client:
             self.send({"type": "CAST_SPELL", "seq_num": ptok,
                        "card_id": card, "targets": targets,
                        "mana_payment": self.auto_mana(card)})
+        elif cmd == "activate":
+            src = args[0]
+            ab_idx = int(args[1]) if len(args) > 1 else 0
+            targets = args[2:3] if len(args) > 2 else []
+            self.send({"type": "ACTIVATE_ABILITY", "seq_num": ptok,
+                       "source_id": src, "ability_index": ab_idx, "targets": targets,
+                       "mana_payment": self.auto_mana(src)}) # Just guess mana from source card if any
         elif cmd == "pass":
             self.send({"type": "PRIORITY_PASS", "seq_num": ptok})
         elif cmd == "attack":
@@ -326,6 +335,10 @@ class Client:
             print(f"hand: {self.state.get('hand', {}).get(self.player_id)}")
         elif cmd == "state":
             self.render()
+        elif cmd == "verbose":
+            import common
+            common.set_verbose(not common.VERBOSE)
+            print(f"[client] verbose mode {'ON' if common.VERBOSE else 'OFF'}")
         elif cmd == "quit":
             self.running = False
         else:

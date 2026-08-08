@@ -1,45 +1,747 @@
 {
   "_comment": "MTGNP shared card catalog. Card instance IDs in PDUs are '<base>_<nnn>'; the base is the key here.",
-
-  "mountain":      { "name": "Mountain",  "kind": "land", "produces": "R" },
-  "island":        { "name": "Island",    "kind": "land", "produces": "U" },
-  "swamp":         { "name": "Swamp",     "kind": "land", "produces": "B" },
-  "forest":        { "name": "Forest",    "kind": "land", "produces": "G" },
-  "plains":        { "name": "Plains",    "kind": "land", "produces": "W" },
-
-  "goblin_guide":  { "name": "Goblin Guide",  "kind": "creature", "cost": { "R": 1 },
-                     "power": 2, "toughness": 2, "haste": true },
-  "grizzly_bears": { "name": "Grizzly Bears", "kind": "creature", "cost": { "G": 1, "X": 1 },
-                     "power": 2, "toughness": 2 },
-  "wall_of_stone": { "name": "Wall of Stone", "kind": "creature", "cost": { "R": 1, "X": 2 },
-                     "power": 0, "toughness": 8 },
-  "reckless_wurm": { "name": "Reckless Wurm", "kind": "creature", "cost": { "R": 2, "X": 2 },
-                     "power": 4, "toughness": 4 },
-  "youthful_knight": { "name": "Youthful Knight", "kind": "creature", "cost": { "W": 1, "X": 1 },
-                     "power": 2, "toughness": 1, "first_strike": true },
-
-  "gray_merchant": { "name": "Gray Merchant of Asphodel", "kind": "creature",
-                     "cost": { "B": 2, "X": 3 }, "power": 2, "toughness": 4,
-                     "etb_trigger": { "effect": "drain", "amount": 2, "optional": true,
-                       "summary": "When Gray Merchant of Asphodel enters the battlefield, each opponent loses 2 life and you gain 2 life." } },
-
-  "festering_imp": { "name": "Festering Imp", "kind": "creature",
-                     "cost": { "B": 1 }, "power": 1, "toughness": 1,
-                     "death_trigger": { "effect": "opp_lose", "amount": 1, "optional": false,
-                       "summary": "When Festering Imp dies, each opponent loses 1 life." } },
-
-  "lightning_bolt": { "name": "Lightning Bolt", "kind": "instant", "cost": { "R": 1 },
-                      "effect": "damage", "amount": 3, "needs_target": true },
-  "shock":          { "name": "Shock", "kind": "instant", "cost": { "R": 1 },
-                      "effect": "damage", "amount": 2, "needs_target": true },
-  "counterspell":   { "name": "Counterspell", "kind": "instant", "cost": { "U": 2 },
-                      "effect": "counter", "needs_target": true, "targets_stack": true },
-  "giant_growth":   { "name": "Giant Growth", "kind": "instant", "cost": { "G": 1 },
-                      "effect": "pump", "power": 3, "toughness": 3, "needs_target": true,
-                      "targets_creature": true },
-  "healing_salve":  { "name": "Healing Salve", "kind": "instant", "cost": { "W": 1 },
-                      "effect": "lifegain", "amount": 3, "needs_target": true },
-
-  "divination":     { "name": "Divination", "kind": "sorcery", "cost": { "U": 1, "X": 2 },
-                      "effect": "draw", "amount": 2, "needs_target": false }
+  "mountain": {
+    "name": "Mountain",
+    "kind": "land",
+    "produces": "R"
+  },
+  "forest": {
+    "name": "Forest",
+    "kind": "land",
+    "produces": "G"
+  },
+  "plains": {
+    "name": "Plains",
+    "kind": "land",
+    "produces": "W"
+  },
+  "island": {
+    "name": "Island",
+    "kind": "land",
+    "produces": "U"
+  },
+  "swamp": {
+    "name": "Swamp",
+    "kind": "land",
+    "produces": "B"
+  },
+  "lightning_bolt": {
+    "name": "Lightning Bolt",
+    "kind": "instant",
+    "cost": {
+      "R": 1
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true
+  },
+  "shock": {
+    "name": "Shock",
+    "kind": "instant",
+    "cost": {
+      "R": 1
+    },
+    "effect": "damage",
+    "amount": 2,
+    "needs_target": true
+  },
+  "lava_spike": {
+    "name": "Lava Spike",
+    "kind": "sorcery",
+    "cost": {
+      "R": 1
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true,
+    "targets_player": true
+  },
+  "flame_slash": {
+    "name": "Flame Slash",
+    "kind": "sorcery",
+    "cost": {
+      "R": 1
+    },
+    "effect": "damage",
+    "amount": 4,
+    "needs_target": true,
+    "targets_creature": true
+  },
+  "searing_spear": {
+    "name": "Searing Spear",
+    "kind": "instant",
+    "cost": {
+      "R": 1,
+      "X": 1
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true
+  },
+  "skullcrack": {
+    "name": "Skullcrack",
+    "kind": "instant",
+    "cost": {
+      "R": 1,
+      "X": 1
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true,
+    "prevent_lifegain": true
+  },
+  "rift_bolt": {
+    "name": "Rift Bolt",
+    "kind": "sorcery",
+    "cost": {
+      "R": 1,
+      "X": 2
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true,
+    "suspend": {
+      "cost": {
+        "R": 1
+      },
+      "time": 1
+    }
+  },
+  "incinerate": {
+    "name": "Incinerate",
+    "kind": "instant",
+    "cost": {
+      "R": 1,
+      "X": 1
+    },
+    "effect": "damage",
+    "amount": 3,
+    "needs_target": true,
+    "no_regen": true
+  },
+  "goblin_guide": {
+    "name": "Goblin Guide",
+    "kind": "creature",
+    "cost": {
+      "R": 1
+    },
+    "power": 2,
+    "toughness": 2,
+    "haste": true,
+    "attack_trigger": {
+      "effect": "reveal_top_land",
+      "target": "defending_player"
+    }
+  },
+  "goblin_bushwhacker": {
+    "name": "Goblin Bushwhacker",
+    "kind": "creature",
+    "cost": {
+      "R": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "kicker": {
+      "R": 1,
+      "X": 1
+    },
+    "etb_trigger": {
+      "condition": "kicked",
+      "effect": "team_pump_haste",
+      "power": 1,
+      "toughness": 0
+    }
+  },
+  "reckless_wurm": {
+    "name": "Reckless Wurm",
+    "kind": "creature",
+    "cost": {
+      "R": 1,
+      "X": 3
+    },
+    "power": 4,
+    "toughness": 4,
+    "trample": true,
+    "madness": {
+      "R": 1,
+      "X": 2
+    }
+  },
+  "monastery_swiftspear": {
+    "name": "Monastery Swiftspear",
+    "kind": "creature",
+    "cost": {
+      "R": 1
+    },
+    "power": 1,
+    "toughness": 2,
+    "haste": true,
+    "prowess": true
+  },
+  "wall_of_stone": {
+    "name": "Wall of Stone",
+    "kind": "creature",
+    "cost": {
+      "R": 1,
+      "X": 2
+    },
+    "power": 0,
+    "toughness": 8,
+    "defender": true
+  },
+  "counterspell": {
+    "name": "Counterspell",
+    "kind": "instant",
+    "cost": {
+      "U": 2
+    },
+    "effect": "counter",
+    "needs_target": true,
+    "targets_stack": true
+  },
+  "cancel": {
+    "name": "Cancel",
+    "kind": "instant",
+    "cost": {
+      "U": 2,
+      "X": 1
+    },
+    "effect": "counter",
+    "needs_target": true,
+    "targets_stack": true
+  },
+  "unsummon": {
+    "name": "Unsummon",
+    "kind": "instant",
+    "cost": {
+      "U": 1
+    },
+    "effect": "bounce",
+    "needs_target": true,
+    "targets_creature": true
+  },
+  "ponder": {
+    "name": "Ponder",
+    "kind": "sorcery",
+    "cost": {
+      "U": 1
+    },
+    "effect": "ponder",
+    "needs_target": false
+  },
+  "negate": {
+    "name": "Negate",
+    "kind": "instant",
+    "cost": {
+      "U": 1,
+      "X": 1
+    },
+    "effect": "counter",
+    "needs_target": true,
+    "targets_stack": true,
+    "noncreature_only": true
+  },
+  "mana_leak": {
+    "name": "Mana Leak",
+    "kind": "instant",
+    "cost": {
+      "U": 1,
+      "X": 1
+    },
+    "effect": "counter",
+    "needs_target": true,
+    "targets_stack": true,
+    "unless_pays": {
+      "X": 3
+    }
+  },
+  "merfolk_looter": {
+    "name": "Merfolk Looter",
+    "kind": "creature",
+    "cost": {
+      "U": 1,
+      "X": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "activated_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "effect": "loot"
+      }
+    ]
+  },
+  "prodigal_sorcerer": {
+    "name": "Prodigal Sorcerer",
+    "kind": "creature",
+    "cost": {
+      "U": 1,
+      "X": 2
+    },
+    "power": 1,
+    "toughness": 1,
+    "activated_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "effect": "damage",
+        "amount": 1,
+        "needs_target": true
+      }
+    ]
+  },
+  "air_elemental": {
+    "name": "Air Elemental",
+    "kind": "creature",
+    "cost": {
+      "U": 2,
+      "X": 3
+    },
+    "power": 4,
+    "toughness": 4,
+    "flying": true
+  },
+  "phantasmal_bear": {
+    "name": "Phantasmal Bear",
+    "kind": "creature",
+    "cost": {
+      "U": 1
+    },
+    "power": 2,
+    "toughness": 2,
+    "illusion": true
+  },
+  "giant_growth": {
+    "name": "Giant Growth",
+    "kind": "instant",
+    "cost": {
+      "G": 1
+    },
+    "effect": "pump",
+    "power": 3,
+    "toughness": 3,
+    "needs_target": true,
+    "targets_creature": true
+  },
+  "rampant_growth": {
+    "name": "Rampant Growth",
+    "kind": "sorcery",
+    "cost": {
+      "G": 1,
+      "X": 1
+    },
+    "effect": "ramp",
+    "needs_target": false
+  },
+  "naturalize": {
+    "name": "Naturalize",
+    "kind": "instant",
+    "cost": {
+      "G": 1,
+      "X": 1
+    },
+    "effect": "destroy",
+    "needs_target": true,
+    "targets_artifact_enchantment": true
+  },
+  "vines_of_vastwood": {
+    "name": "Vines of Vastwood",
+    "kind": "instant",
+    "cost": {
+      "G": 1
+    },
+    "effect": "hexproof",
+    "needs_target": true,
+    "targets_creature": true,
+    "kicker": {
+      "G": 1
+    },
+    "kicked_effect": {
+      "effect": "pump",
+      "power": 4,
+      "toughness": 4
+    }
+  },
+  "llanowar_elves": {
+    "name": "Llanowar Elves",
+    "kind": "creature",
+    "cost": {
+      "G": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "mana_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "produces": "G"
+      }
+    ]
+  },
+  "elvish_mystic": {
+    "name": "Elvish Mystic",
+    "kind": "creature",
+    "cost": {
+      "G": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "mana_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "produces": "G"
+      }
+    ]
+  },
+  "grizzly_bears": {
+    "name": "Grizzly Bears",
+    "kind": "creature",
+    "cost": {
+      "G": 1,
+      "X": 1
+    },
+    "power": 2,
+    "toughness": 2
+  },
+  "leatherback_baloth": {
+    "name": "Leatherback Baloth",
+    "kind": "creature",
+    "cost": {
+      "G": 3
+    },
+    "power": 4,
+    "toughness": 5
+  },
+  "troll_ascetic": {
+    "name": "Troll Ascetic",
+    "kind": "creature",
+    "cost": {
+      "G": 2,
+      "X": 1
+    },
+    "power": 3,
+    "toughness": 2,
+    "hexproof": true,
+    "activated_abilities": [
+      {
+        "cost": {
+          "G": 1,
+          "X": 1
+        },
+        "effect": "regenerate"
+      }
+    ]
+  },
+  "swords_to_plowshares": {
+    "name": "Swords to Plowshares",
+    "kind": "instant",
+    "cost": {
+      "W": 1
+    },
+    "effect": "exile_and_gain_life",
+    "needs_target": true,
+    "targets_creature": true
+  },
+  "path_to_exile": {
+    "name": "Path to Exile",
+    "kind": "instant",
+    "cost": {
+      "W": 1
+    },
+    "effect": "exile_and_ramp",
+    "needs_target": true,
+    "targets_creature": true
+  },
+  "healing_salve": {
+    "name": "Healing Salve",
+    "kind": "instant",
+    "cost": {
+      "W": 1
+    },
+    "effect": "lifegain",
+    "amount": 3,
+    "needs_target": true
+  },
+  "pacifism": {
+    "name": "Pacifism",
+    "kind": "enchantment",
+    "subtype": "Aura",
+    "cost": {
+      "W": 1,
+      "X": 1
+    },
+    "effect": "enchant_creature",
+    "needs_target": true,
+    "targets_creature": true,
+    "static_effect": "pacifism"
+  },
+  "white_knight": {
+    "name": "White Knight",
+    "kind": "creature",
+    "cost": {
+      "W": 2
+    },
+    "power": 2,
+    "toughness": 2,
+    "first_strike": true,
+    "protection_from": "B"
+  },
+  "youthful_knight": {
+    "name": "Youthful Knight",
+    "kind": "creature",
+    "cost": {
+      "W": 1,
+      "X": 1
+    },
+    "power": 2,
+    "toughness": 1,
+    "first_strike": true
+  },
+  "serra_angel": {
+    "name": "Serra Angel",
+    "kind": "creature",
+    "cost": {
+      "W": 2,
+      "X": 3
+    },
+    "power": 4,
+    "toughness": 4,
+    "flying": true,
+    "vigilance": true
+  },
+  "savannah_lions": {
+    "name": "Savannah Lions",
+    "kind": "creature",
+    "cost": {
+      "W": 1
+    },
+    "power": 2,
+    "toughness": 1
+  },
+  "mother_of_runes": {
+    "name": "Mother of Runes",
+    "kind": "creature",
+    "cost": {
+      "W": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "activated_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "effect": "give_protection",
+        "needs_target": true,
+        "targets_creature": true
+      }
+    ]
+  },
+  "dark_ritual": {
+    "name": "Dark Ritual",
+    "kind": "instant",
+    "cost": {
+      "B": 1
+    },
+    "effect": "add_mana",
+    "produces": {
+      "B": 3
+    },
+    "needs_target": false
+  },
+  "terror": {
+    "name": "Terror",
+    "kind": "instant",
+    "cost": {
+      "B": 1,
+      "X": 1
+    },
+    "effect": "destroy_no_regen",
+    "needs_target": true,
+    "targets_creature": true,
+    "non_black": true,
+    "non_artifact": true
+  },
+  "doom_blade": {
+    "name": "Doom Blade",
+    "kind": "instant",
+    "cost": {
+      "B": 1,
+      "X": 1
+    },
+    "effect": "destroy",
+    "needs_target": true,
+    "targets_creature": true,
+    "non_black": true
+  },
+  "raise_dead": {
+    "name": "Raise Dead",
+    "kind": "sorcery",
+    "cost": {
+      "B": 1
+    },
+    "effect": "return_from_graveyard",
+    "needs_target": true,
+    "targets_graveyard_creature": true
+  },
+  "mind_rot": {
+    "name": "Mind Rot",
+    "kind": "sorcery",
+    "cost": {
+      "B": 1,
+      "X": 2
+    },
+    "effect": "discard",
+    "amount": 2,
+    "needs_target": true,
+    "targets_player": true
+  },
+  "gray_merchant": {
+    "name": "Gray Merchant of Asphodel",
+    "kind": "creature",
+    "cost": {
+      "B": 2,
+      "X": 3
+    },
+    "power": 2,
+    "toughness": 4,
+    "etb_trigger": {
+      "effect": "drain_devotion",
+      "optional": false,
+      "summary": "When Gray Merchant of Asphodel enters the battlefield, each opponent loses X life and you gain X life, where X is your devotion to black."
+    }
+  },
+  "gravedigger": {
+    "name": "Gravedigger",
+    "kind": "creature",
+    "cost": {
+      "B": 1,
+      "X": 3
+    },
+    "power": 2,
+    "toughness": 2,
+    "etb_trigger": {
+      "effect": "return_from_graveyard",
+      "optional": false,
+      "needs_target": true,
+      "targets_graveyard_creature": true,
+      "summary": "When Gravedigger enters the battlefield, return target creature card from your graveyard to your hand."
+    }
+  },
+  "royal_assassin": {
+    "name": "Royal Assassin",
+    "kind": "creature",
+    "cost": {
+      "B": 2,
+      "X": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "activated_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "effect": "destroy",
+        "needs_target": true,
+        "targets_tapped_creature": true
+      }
+    ]
+  },
+  "black_knight": {
+    "name": "Black Knight",
+    "kind": "creature",
+    "cost": {
+      "B": 2
+    },
+    "power": 2,
+    "toughness": 2,
+    "first_strike": true,
+    "protection_from": "W"
+  },
+  "festering_imp": {
+    "name": "Festering Imp",
+    "kind": "creature",
+    "cost": {
+      "B": 1
+    },
+    "power": 1,
+    "toughness": 1,
+    "death_trigger": {
+      "effect": "opp_lose",
+      "amount": 1,
+      "optional": false,
+      "summary": "When Festering Imp dies, each opponent loses 1 life."
+    }
+  },
+  "sol_ring": {
+    "name": "Sol Ring",
+    "kind": "artifact",
+    "cost": {
+      "X": 1
+    },
+    "mana_abilities": [
+      {
+        "cost": {
+          "tap": true
+        },
+        "produces": {
+          "X": 2
+        }
+      }
+    ]
+  },
+  "ornithopter": {
+    "name": "Ornithopter",
+    "kind": "artifact_creature",
+    "cost": {
+      "X": 0
+    },
+    "power": 0,
+    "toughness": 2,
+    "flying": true
+  },
+  "millstone": {
+    "name": "Millstone",
+    "kind": "artifact",
+    "cost": {
+      "X": 2
+    },
+    "activated_abilities": [
+      {
+        "cost": {
+          "X": 2,
+          "tap": true
+        },
+        "effect": "mill",
+        "amount": 2,
+        "needs_target": true,
+        "targets_player": true
+      }
+    ]
+  },
+  "rod_of_ruin": {
+    "name": "Rod of Ruin",
+    "kind": "artifact",
+    "cost": {
+      "X": 4
+    },
+    "activated_abilities": [
+      {
+        "cost": {
+          "X": 3,
+          "tap": true
+        },
+        "effect": "damage",
+        "amount": 1,
+        "needs_target": true
+      }
+    ]
+  }
 }
