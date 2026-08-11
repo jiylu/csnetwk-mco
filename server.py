@@ -261,6 +261,7 @@ class Server:
             self.players.append({
                 "id": None, "deck": None,      # filled during LOBBY
                 "library": [], "hand": [], "graveyard": [],
+                "exile": [],                   # exile zone (removed from game)
                 "battlefield": [],             # list of permanent dicts
                 "life": 20, "mulligans": 0, "land_played": False,
             })
@@ -329,6 +330,8 @@ class Server:
                             self.pid(1): bf(self.players[1])},
             "graveyard": {self.pid(0): list(self.players[0]["graveyard"]),
                           self.pid(1): list(self.players[1]["graveyard"])},
+            "exile": {self.pid(0): list(self.players[0]["exile"]),
+                      self.pid(1): list(self.players[1]["exile"])},
             "hand": {self.pid(for_idx): list(me["hand"])},
             "hand_counts": {self.pid(for_idx): len(me["hand"]),
                             self.pid(1 - for_idx): len(opp["hand"])},
@@ -988,7 +991,7 @@ class Server:
             if perm:
                 ctrl = self.idx_of(perm["controller"])
                 self.players[ctrl]["battlefield"].remove(perm)
-                # MTGNP 1.0 has no 'exile' zone, so we just remove it
+                self.players[ctrl]["exile"].append(perm["id"])
                 cdef = card_def(self.catalog, perm["id"])
                 power = cdef.get("power", 0)
                 self.players[ctrl]["life"] += power
@@ -999,6 +1002,7 @@ class Server:
             if perm:
                 ctrl = self.idx_of(perm["controller"])
                 self.players[ctrl]["battlefield"].remove(perm)
+                self.players[ctrl]["exile"].append(perm["id"])
                 changes.append({"change_type": "EXILE", "target": tgt})
                 # ramp
                 deck = self.players[ctrl]["deck"]

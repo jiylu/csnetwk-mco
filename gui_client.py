@@ -8,6 +8,7 @@ from client import Client, load_deck
 
 logs = []
 logs_lock = threading.Lock()
+log_offset = 0  # total number of logs popped (for absolute indexing)
 
 class LogInterceptor:
     def __init__(self, orig):
@@ -21,9 +22,11 @@ class LogInterceptor:
             line = line.strip()
             if line:
                 with logs_lock:
+                    global log_offset
                     logs.append(line)
-                    if len(logs) > 100:
+                    if len(logs) > 500:
                         logs.pop(0)
+                        log_offset += 1
     def flush(self):
         self.orig.flush()
 
@@ -64,6 +67,7 @@ def make_handler(client_instance):
                 
                 with logs_lock:
                     logs_copy = list(logs)
+                    offset_copy = log_offset
                 
                 resp = {
                     "player_id": client_instance.player_id,
@@ -72,7 +76,8 @@ def make_handler(client_instance):
                     "request_token": rtok,
                     "trigger": trig,
                     "trigger_order": torder,
-                    "logs": logs_copy
+                    "logs": logs_copy,
+                    "log_offset": offset_copy
                 }
                 self.wfile.write(json.dumps(resp).encode('utf-8'))
             else:

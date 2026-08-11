@@ -93,17 +93,35 @@
         </div>
     </section>
 
-    <!-- Right Sidebar: Integrity -->
-    <aside class="w-64 h-full flex flex-col gap-4 flex-shrink-0">
-        <!-- Opponent Integrity -->
-        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-4 h-1/3 border-b-2 border-secondary-container">
-            <h2 class="font-label-caps text-xs text-secondary-fixed-dim uppercase tracking-widest">HOSTILE INTEGRITY</h2>
+    <!-- Right Sidebar: Life Totals & Zones -->
+    <aside class="w-64 h-full flex flex-col gap-2 flex-shrink-0 overflow-y-auto">
+        <!-- Opponent Life Total -->
+        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-2 border-b-2 border-secondary-container">
+            <h2 class="font-label-caps text-xs text-secondary-fixed-dim uppercase tracking-widest">OPPONENT LIFE TOTAL</h2>
             <div class="text-4xl font-display-md text-secondary-container" id="oppLife">??</div>
         </div>
-        <!-- Player Integrity -->
-        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-4 h-1/3 border-b-2 border-primary-container">
-            <h2 class="font-label-caps text-xs text-primary-fixed-dim uppercase tracking-widest">LOCAL INTEGRITY</h2>
+        <!-- Player Life Total -->
+        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-2 border-b-2 border-primary-container">
+            <h2 class="font-label-caps text-xs text-primary-fixed-dim uppercase tracking-widest">YOUR LIFE TOTAL</h2>
             <div class="text-4xl font-display-md text-primary-container" id="playerLife">??</div>
+        </div>
+        <!-- Graveyard -->
+        <div class="glass-panel flex flex-col overflow-hidden">
+            <div class="bg-surface-container-high px-3 py-1.5 border-b border-outline-variant flex justify-between items-center cursor-pointer" onclick="document.getElementById('graveyardContent').classList.toggle('hidden')">
+                <span class="font-label-caps text-xs text-on-surface uppercase">GRAVEYARD</span>
+                <span class="font-code-sm text-xs text-error" id="graveyardCount">0</span>
+            </div>
+            <div class="p-2 font-code-sm text-xs max-h-32 overflow-y-auto flex flex-col gap-1" id="graveyardContent">
+            </div>
+        </div>
+        <!-- Exile -->
+        <div class="glass-panel flex flex-col overflow-hidden">
+            <div class="bg-surface-container-high px-3 py-1.5 border-b border-outline-variant flex justify-between items-center cursor-pointer" onclick="document.getElementById('exileContent').classList.toggle('hidden')">
+                <span class="font-label-caps text-xs text-on-surface uppercase">EXILE</span>
+                <span class="font-code-sm text-xs text-outline" id="exileCount">0</span>
+            </div>
+            <div class="p-2 font-code-sm text-xs max-h-32 overflow-y-auto flex flex-col gap-1" id="exileContent">
+            </div>
         </div>
         <!-- Action Buttons -->
         <div class="glass-panel flex-1 flex flex-col p-4 gap-2 justify-center" id="actionButtons">
@@ -138,10 +156,15 @@
         }
     });
 
-    let lastLogCount = 0;
+    let lastLogId = 0;  // absolute log ID (offset + index)
+    const LAND_BASES = ['mountain', 'swamp', 'plains', 'island', 'forest'];
     
     function formatCardName(id) {
-        return id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('_').replace(/_00\d/g, '');
+        let parts = id.split('_');
+        if (parts.length > 1 && !isNaN(parts[parts.length - 1])) {
+            parts.pop();
+        }
+        return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
     }
 
     function appendToCmd(text) {
@@ -160,7 +183,12 @@
         div.className = `w-32 h-48 glass-panel ${colorClass} flex flex-col relative cursor-pointer ${transformClass}`;
         if (type === 'hand') {
             div.classList.add('card-hover-fx', 'transition-transform', 'origin-bottom');
-            div.onclick = () => appendToCmd(card.id.includes('mountain') || card.id.includes('swamp') ? `play ${card.id}` : `cast ${card.id}`);
+            div.onclick = () => {
+                const baseParts = card.id.split('_');
+                if (baseParts.length > 1 && !isNaN(baseParts[baseParts.length - 1])) baseParts.pop();
+                const baseName = baseParts.join('_');
+                appendToCmd(LAND_BASES.includes(baseName) ? `play ${card.id}` : `cast ${card.id}`);
+            };
         } else {
             div.onclick = () => appendToCmd(card.id);
         }
@@ -176,11 +204,11 @@
         let sickHtml = card.summoning_sick ? `<span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[10px] bg-error text-surface px-1">SICK</span>` : '';
 
         div.innerHTML = `
-            <div class="${bgClass} border-b px-1 py-1 text-center font-label-caps text-[10px] truncate">
+            <div class="${bgClass} border-b px-1 py-1 text-center font-label-caps text-[10px] truncate" title="${formatCardName(card.id)}">
                 ${formatCardName(card.id)}
             </div>
-            <div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden text-center text-[8px] opacity-70">
-                ${card.id}
+            <div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden">
+                <span class="material-symbols-outlined text-2xl opacity-80">memory</span>
                 ${sickHtml}
             </div>
             ${ptHtml}
@@ -257,21 +285,64 @@
                 });
             }
 
-            // Render Logs
-            if (data.logs && data.logs.length > lastLogCount) {
-                const lc = document.getElementById('logContainer');
-                for (let i = lastLogCount; i < data.logs.length; i++) {
-                    const ldiv = document.createElement('div');
-                    ldiv.innerText = data.logs[i];
-                    
-                    if(data.logs[i].includes('ERROR')) ldiv.className = 'text-error';
-                    else if(data.logs[i].includes('>>>')) ldiv.className = 'text-tertiary-fixed-dim';
-                    else ldiv.className = 'text-on-surface-variant';
-                    
-                    lc.appendChild(ldiv);
+            // Render Graveyard
+            const gc = document.getElementById('graveyardContent');
+            gc.innerHTML = '';
+            let graveyardTotal = 0;
+            if (state.graveyard) {
+                for (let pid in state.graveyard) {
+                    const cards = state.graveyard[pid];
+                    graveyardTotal += cards.length;
+                    const label = pid === me ? 'You' : 'Opp';
+                    cards.forEach(cid => {
+                        const d = document.createElement('div');
+                        d.className = pid === me ? 'text-primary-fixed-dim' : 'text-secondary-fixed-dim';
+                        d.innerText = `[${label}] ${formatCardName(cid)}`;
+                        gc.appendChild(d);
+                    });
                 }
-                lc.scrollTop = lc.scrollHeight;
-                lastLogCount = data.logs.length;
+            }
+            document.getElementById('graveyardCount').innerText = graveyardTotal;
+
+            // Render Exile
+            const ec = document.getElementById('exileContent');
+            ec.innerHTML = '';
+            let exileTotal = 0;
+            if (state.exile) {
+                for (let pid in state.exile) {
+                    const cards = state.exile[pid];
+                    exileTotal += cards.length;
+                    const label = pid === me ? 'You' : 'Opp';
+                    cards.forEach(cid => {
+                        const d = document.createElement('div');
+                        d.className = 'text-outline';
+                        d.innerText = `[${label}] ${formatCardName(cid)}`;
+                        ec.appendChild(d);
+                    });
+                }
+            }
+            document.getElementById('exileCount').innerText = exileTotal;
+
+            // Render Logs (offset-based absolute ID tracking)
+            const logOffset = data.log_offset || 0;
+            if (data.logs) {
+                const lc = document.getElementById('logContainer');
+                for (let i = 0; i < data.logs.length; i++) {
+                    const absId = logOffset + i;
+                    if (absId >= lastLogId) {
+                        const ldiv = document.createElement('div');
+                        ldiv.innerText = data.logs[i];
+                        
+                        if(data.logs[i].includes('ERROR')) ldiv.className = 'text-error';
+                        else if(data.logs[i].includes('>>>')) ldiv.className = 'text-tertiary-fixed-dim';
+                        else ldiv.className = 'text-on-surface-variant';
+                        
+                        lc.appendChild(ldiv);
+                    }
+                }
+                lastLogId = logOffset + data.logs.length;
+                const lc2 = document.getElementById('logContainer');
+                lc2.scrollTop = lc2.scrollHeight;
             }
 
         } catch (e) {
