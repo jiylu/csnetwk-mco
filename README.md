@@ -199,21 +199,18 @@ seeded shuffle locally, so its scripted 10-turn game is fully reproducible.
 
 | Task / Feature | Brian Garcia | Jeremy Leano | Mark Canoso | Renzel Eleydo |
 |---|---|---|---|---|
-| TCP Server: connection handling, framing, dispatch | Lead | Support | | Support |
+| TCP Server: connection handling, framing, dispatch | Lead | | Support | |
 | Game lifecycle: LOBBY, GAME_SETUP, MULLIGAN logic | Lead | Support | | |
-| Turn & phase engine (all phases/steps, transitions) | Lead | | Support | |
+| Turn & phase engine (all phases/steps, transitions) | | Lead | | Support |
 | Priority & Stack logic, spell/ability resolution | Support | Lead | | |
 | Combat system (attackers, blockers, damage) | | Lead | Support | |
-| Card effects (all 58 cards, triggers, ETB, death) | Support | Lead | Support | |
+| Card effects (all 58 cards, triggers, ETB, death) | | Support | Lead | |
 | Client implementation & state rendering | | | Lead | Support |
-| GUI web interface (index.html, gui_client.py) | | | Support | Lead |
-| Spectator client | | | | Lead |
-| PDU serialisation/deserialisation (all 25 PDU types) | Support | | Lead | |
-| Error handling, PING/PONG heartbeat, disconnect logic | | Support | Lead | |
-| Verbose mode (client + server PDU logging, toggle) | | | Lead | Support |
-| Testing & interoperability (test_game, test_combat, test_edge) | Support | Support | | Lead |
-| README / documentation / AI disclosure | | | Support | Lead |
-| Bug fixes (log freeze, land detection, exile zone) | Support | | | Lead |
+| PDU serialisation/deserialisation (all 25 PDU types) | Support | | | Lead |
+| Error handling, PING/PONG heartbeat, disconnect logic | | | Support | Lead |
+| Verbose mode (client + server PDU logging, toggle) | Support | | Lead | |
+| GUI web interface, spectator client (bonus features) | | Support | | Lead |
+| Testing, README, documentation, bug fixes | Lead | | | Support |
 
 ## AI Usage Disclosure
 
