@@ -2,9 +2,6 @@
 
 CSNETWK Machine Problem — implementation of RFC 0001 (MTGNP v1.0).
 
-> **NOTE:** the rubric requires the README as a **PDF**. Convert this
-> Markdown file to PDF before submission.
-
 ## Contents
 
 | File | Purpose |
