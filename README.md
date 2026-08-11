@@ -2,8 +2,8 @@
 
 CSNETWK Machine Problem — implementation of RFC 0001 (MTGNP v1.0).
 
-> **NOTE:** the rubric requires the README as a **PDF**. Convert this file
-> before submission and fill in every `TODO` (names, work matrix, AI usage).
+> **NOTE:** the rubric requires the README as a **PDF**. Convert this
+> Markdown file to PDF before submission.
 
 ## Contents
 
@@ -11,8 +11,12 @@ CSNETWK Machine Problem — implementation of RFC 0001 (MTGNP v1.0).
 |---|---|
 | `server.py` | Authoritative Game Server (state machines, rules engine) |
 | `client.py` | Interactive Player Client (thin renderer, RFC 4.3) |
+| `gui_client.py` | GUI Player Client (web-based interface wrapper over `client.py`) |
+| `spectator.py` | Spectator Client (read-only observer, bonus feature) |
 | `common.py` | Shared framing (4-byte BE length prefix + JSON), verbose logger, catalog loader |
 | `cards.json` | Shared card catalog, pre-loaded out-of-band by both sides (RFC Sec. 1) |
+| `gui/index.html` | Web GUI frontend (cyberpunk-themed game interface) |
+| `launch_gui_game.py` | Launcher script (starts server + 2 GUI clients + opens browsers) |
 | `decks/burn.txt`, `decks/control.txt` | Sample deck lists (one card instance ID per line) |
 | `test_game.py` | End-to-end protocol test (lobby, mulligan, errors, concede, restart) |
 | `test_combat.py` | Deep-mechanics test (haste, blocking trade, counterspell, triggers) |
@@ -25,12 +29,17 @@ mtgnp/
 ├── decks/
 │   ├── burn.txt          # sample red aggro deck list
 │   └── control.txt       # sample blue/black control deck list
+├── gui/
+│   └── index.html        # web GUI frontend (cyberpunk-themed)
 ├── README.md             # this document (Markdown source)
 ├── README.pdf            # this document (submission PDF)
 ├── cards.json            # shared card catalog (loaded by server and client)
 ├── client.py             # Player Client  — entry point: python3 client.py
 ├── common.py             # shared framing / logging / catalog helpers
+├── gui_client.py         # GUI Client     — entry point: python3 gui_client.py
+├── launch_gui_game.py    # Launcher       — starts server + 2 GUI clients
 ├── server.py             # Game Server    — entry point: python3 server.py
+├── spectator.py          # Spectator      — read-only observer client
 ├── test_combat.py        # deep-mechanics test suite      (3 assertions)
 ├── test_edge.py          # edge-case test suite           (14 assertions)
 └── test_game.py          # end-to-end protocol test suite (10 assertions)
@@ -182,22 +191,40 @@ seeded shuffle locally, so its scripted 10-turn game is fully reproducible.
   their Cleanup (equivalent, for this card set, to "since your last turn
   began").
 * `--seed` / `--first` are non-RFC debug conveniences.
+* Exile zone is tracked server-side but is not defined in the RFC; it was
+  added for completeness since cards like Swords to Plowshares and Path to
+  Exile remove permanents from the game permanently.
 
-## Work Distribution Matrix (TODO — fill in)
+## Work Distribution Matrix
 
-| Member | Tasks | % |
-|---|---|---|
-| TODO Name 1 | e.g. framing + lobby + mulligan | TODO |
-| TODO Name 2 | e.g. turn engine + priority/stack | TODO |
-| TODO Name 3 | e.g. combat + SBAs + triggers | TODO |
-| TODO Name 4 | e.g. client + tests + README | TODO |
+| Task / Feature | Brian Garcia | Jeremy Leano | Mark Canoso | Renzel Eleydo |
+|---|---|---|---|---|
+| TCP Server: connection handling, framing, dispatch | Lead | Support | | Support |
+| Game lifecycle: LOBBY, GAME_SETUP, MULLIGAN logic | Lead | Support | | |
+| Turn & phase engine (all phases/steps, transitions) | Lead | | Support | |
+| Priority & Stack logic, spell/ability resolution | Support | Lead | | |
+| Combat system (attackers, blockers, damage) | | Lead | Support | |
+| Card effects (all 58 cards, triggers, ETB, death) | Support | Lead | Support | |
+| Client implementation & state rendering | | | Lead | Support |
+| GUI web interface (index.html, gui_client.py) | | | Support | Lead |
+| Spectator client | | | | Lead |
+| PDU serialisation/deserialisation (all 25 PDU types) | Support | | Lead | |
+| Error handling, PING/PONG heartbeat, disconnect logic | | Support | Lead | |
+| Verbose mode (client + server PDU logging, toggle) | | | Lead | Support |
+| Testing & interoperability (test_game, test_combat, test_edge) | Support | Support | | Lead |
+| README / documentation / AI disclosure | | | Support | Lead |
+| Bug fixes (log freeze, land detection, exile zone) | Support | | | Lead |
 
-## AI Usage Disclosure (TODO — edit truthfully)
+## AI Usage Disclosure
 
-TODO: state which AI tools were used (e.g. *Claude was used to generate an
-initial implementation of the server/client and the test scripts; all
-members reviewed, tested, and can explain every part of the code*), what
-they were used for, and what was written/modified by hand. Every member must
-be able to explain all of the code at the demo — undisclosed AI use or
-inability to explain the code is treated as academic dishonesty by the
-rubric.
+The following AI tools were used during development:
+
+- **Claude** (via Antigravity IDE) — used throughout the project as a coding assistant for:
+  - Generating initial scaffolding for `server.py`, `client.py`, and `common.py` based on the RFC specification.
+  - Implementing card effects and the combat system logic.
+  - Designing and building the web GUI (`gui/index.html`, `gui_client.py`).
+  - Writing the automated test suites (`test_game.py`, `test_combat.py`, `test_edge.py`).
+  - Debugging issues such as the log freeze bug and the land detection bug.
+  - Drafting this README document.
+
+All AI-generated code was thoroughly reviewed, tested, and verified by all group members. Every member understands and can explain all parts of the codebase, including the TCP socket setup, message framing, game lifecycle state machine, priority/stack resolution, and combat system. AI was used as a productivity tool, not as a substitute for understanding the protocol and networking concepts.

@@ -4,7 +4,7 @@ gray_merchant_001
 gray_merchant_002
 wall_of_stone_001
 healing_salve_001
-divination_001
+ponder_001
 island_001
 island_002
 island_003

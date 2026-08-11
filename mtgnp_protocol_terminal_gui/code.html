@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MTGNP Protocol v2.0 - Active Node</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#131313",
+                      "error": "#ffb4ab",
+                      "error-container": "#93000a",
+                      "secondary-fixed-dim": "#ffabf3",
+                      "inverse-surface": "#e5e2e1",
+                      "on-secondary-fixed": "#380038",
+                      "surface-container-highest": "#353534",
+                      "surface-variant": "#353534",
+                      "primary-container": "#00f3ff",
+                      "on-secondary-fixed-variant": "#810081",
+                      "on-tertiary-container": "#107000",
+                      "on-primary": "#00373a",
+                      "on-error": "#690005",
+                      "on-secondary": "#5b005b",
+                      "tertiary-container": "#36fd0f",
+                      "on-secondary-container": "#500050",
+                      "primary-fixed-dim": "#00dce6",
+                      "tertiary": "#e8ffda",
+                      "surface-tint": "#00dce6",
+                      "surface-bright": "#393939",
+                      "primary": "#e3fdff",
+                      "tertiary-fixed-dim": "#2ae500",
+                      "on-primary-fixed": "#002022",
+                      "surface-container-lowest": "#0e0e0e",
+                      "surface-dim": "#131313",
+                      "on-background": "#e5e2e1",
+                      "on-primary-fixed-variant": "#004f53",
+                      "inverse-primary": "#00696f",
+                      "primary-fixed": "#6ff6ff",
+                      "secondary": "#ffabf3",
+                      "on-surface-variant": "#b9cacb",
+                      "inverse-on-surface": "#313030",
+                      "on-tertiary-fixed": "#022100",
+                      "surface-container-high": "#2a2a2a",
+                      "background": "#131313",
+                      "outline": "#849495",
+                      "on-tertiary": "#053900",
+                      "on-tertiary-fixed-variant": "#095300",
+                      "surface-container-low": "#1c1b1b",
+                      "on-surface": "#e5e2e1",
+                      "tertiary-fixed": "#79ff5b",
+                      "secondary-fixed": "#ffd7f5",
+                      "surface-container": "#201f1f",
+                      "secondary-container": "#fe00fe",
+                      "on-error-container": "#ffdad6",
+                      "on-primary-container": "#006b71",
+                      "outline-variant": "#3a494b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1440px",
+                      "margin-mobile": "16px",
+                      "gutter": "16px",
+                      "unit": "4px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "JetBrains Mono"
+                      ],
+                      "display-md": [
+                              "Space Mono"
+                      ],
+                      "body-lg": [
+                              "JetBrains Mono"
+                      ],
+                      "code-sm": [
+                              "JetBrains Mono"
+                      ],
+                      "display-lg": [
+                              "Space Mono"
+                      ],
+                      "label-caps": [
+                              "Space Mono"
+                      ],
+                      "headline-sm": [
+                              "Space Mono"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "code-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-caps": [
+                              "10px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.2em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+      </script>
+<style>
+        /* CSS Scanline Overlay & Glitch Effects */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .terminal-grid {
+            background-image: 
+                linear-gradient(rgba(0, 220, 230, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 220, 230, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .crt-flicker {
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.95; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        .glitch-text {
+            position: relative;
+        }
+        
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+        
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 rgba(254, 0, 254, 0.8);
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim 2s infinite linear alternate-reverse;
+        }
+        
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -1px 0 rgba(0, 243, 255, 0.8);
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(74px, 9999px, 86px, 0); }
+            5% { clip: rect(100px, 9999px, 11px, 0); }
+            10% { clip: rect(32px, 9999px, 89px, 0); }
+            15% { clip: rect(65px, 9999px, 20px, 0); }
+            20% { clip: rect(38px, 9999px, 63px, 0); }
+            25% { clip: rect(10px, 9999px, 54px, 0); }
+            30% { clip: rect(93px, 9999px, 7px, 0); }
+            35% { clip: rect(22px, 9999px, 77px, 0); }
+            40% { clip: rect(69px, 9999px, 34px, 0); }
+            45% { clip: rect(88px, 9999px, 15px, 0); }
+            50% { clip: rect(55px, 9999px, 92px, 0); }
+            55% { clip: rect(18px, 9999px, 49px, 0); }
+            60% { clip: rect(97px, 9999px, 26px, 0); }
+            65% { clip: rect(41px, 9999px, 83px, 0); }
+            70% { clip: rect(5px, 9999px, 61px, 0); }
+            75% { clip: rect(76px, 9999px, 39px, 0); }
+            80% { clip: rect(29px, 9999px, 96px, 0); }
+            85% { clip: rect(82px, 9999px, 12px, 0); }
+            90% { clip: rect(48px, 9999px, 68px, 0); }
+            95% { clip: rect(13px, 9999px, 91px, 0); }
+            100% { clip: rect(62px, 9999px, 3px, 0); }
+        }
+
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(132, 148, 149, 0.3);
+        }
+
+        .neon-border-cyan {
+            border: 1px solid theme('colors.primary-container');
+            box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2), 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+        
+        .neon-border-magenta {
+            border: 1px solid theme('colors.secondary-container');
+            box-shadow: inset 0 0 10px rgba(254, 0, 254, 0.2), 0 0 10px rgba(254, 0, 254, 0.2);
+        }
+
+        /* Custom Scrollbar for Terminal */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(18, 18, 18, 0.8); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant'); 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.primary-fixed-dim'); 
+        }
+
+        .blinking-cursor {
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .card-hover-fx:hover {
+            transform: translateY(-20px) scale(1.05);
+            z-index: 50;
+        }
+
+        .casting-anim {
+            animation: castPulse 0.5s ease-out;
+        }
+
+        @keyframes castPulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.1); filter: brightness(2); box-shadow: 0 0 30px theme('colors.primary'); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        
+        .tapped {
+            transform: rotate(90deg);
+            opacity: 0.6;
+            filter: grayscale(100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen overflow-hidden font-body-md terminal-grid crt-flicker relative selection:bg-primary-container selection:text-on-primary">
+<!-- Shader Background -->
+<!-- STITCH_SHADER_START:ANIMATION_1 class="absolute inset-0 w-full h-full -z-10 opacity-40" -->
+<div class="absolute inset-0 w-full h-full -z-10 opacity-40" style="display:block;">
+<canvas id="shader-canvas-ANIMATION_1" style="display:block;width:100%;height:100%"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_1');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+
+float grid(vec2 uv, float spacing) {
+    vec2 lines = mod(uv, spacing);
+    return step(spacing * 0.98, lines.x) + step(spacing * 0.98, lines.y);
+}
+
+void main() {
+    vec2 uv = (gl_FragCoord.xy / u_resolution.xy);
+    
+    // Slight zoom and pan
+    uv = (uv - 0.5) * 1.1 + 0.5;
+    uv.x += sin(u_time * 0.05) * 0.02;
+    uv.y += cos(u_time * 0.05) * 0.02;
+
+    // Dark base
+    vec3 color = vec3(0.01, 0.01, 0.02);
+    
+    // Grid layers
+    float g1 = grid(uv * 10.0, 1.0);
+    float g2 = grid(uv * 50.0, 1.0);
+    
+    color += vec3(0.0, 0.4, 0.5) * g1 * 0.1;
+    color += vec3(0.0, 0.8, 1.0) * g2 * 0.05;
+    
+    // Scanlines
+    float scanline = sin(uv.y * 800.0 + u_time * 5.0) * 0.04;
+    color -= scanline;
+    
+    // Pulse
+    float pulse = sin(u_time * 0.5) * 0.02 + 0.98;
+    color *= pulse;
+
+    // Vignette
+    float vig = 1.0 - smoothstep(0.5, 1.5, length(uv - 0.5));
+    color *= vig;
+
+    gl_FragColor = vec4(color, 1.0);
+}`;
+  function cs(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, cs(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, cs(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'a_position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes = gl.getUniformLocation(prog, 'u_resolution');
+  const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+
+  // u_mouse is in pixel coordinates matching u_resolution (ShaderToy convention).
+  // Shaders that need normalized coords should use: u_mouse / u_resolution.
+  let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+  window.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width && rect.height) {
+      const nx = (event.clientX - rect.left) / rect.width;
+      const ny = 1.0 - (event.clientY - rect.top) / rect.height;
+      mouse.x = nx * canvas.width;
+      mouse.y = ny * canvas.height;
+    }
+  });
+
+  function render(t) {
+    if (typeof ResizeObserver === 'undefined') syncSize();
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    if (uTime) gl.uniform1f(uTime, t * 0.001);
+    if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
+    if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(render);
+  }
+  render(0);
+})();
+</script>
+</div>
+<!-- STITCH_SHADER_END:ANIMATION_1 -->
+<!-- Scanline Overlay -->
+<div class="absolute inset-0 w-full h-full scanlines"></div>
+<!-- TopAppBar (From JSON) -->
+<header class="bg-surface/40 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_15px_rgba(0,220,230,0.3)] fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-unit h-16 transition-all duration-300 ease-in-out">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<h1 class="font-display-md text-display-md text-primary tracking-widest uppercase glitch-text" data-text="MTGNP PROTOCOL v2.0">MTGNP PROTOCOL v2.0</h1>
+<span class="font-code-sm text-code-sm text-secondary-container ml-4 px-2 py-1 border border-secondary-container rounded-DEFAULT">NODE_ACTIVE: 0x82FA</span>
+</div>
+<!-- Navigation Simulation from JSON intent -->
+<nav class="hidden md:flex gap-8">
+<a class="font-code-sm text-code-sm text-primary border-b-2 border-primary hover:bg-primary-container/10 px-2 py-1" href="#">ROOT</a>
+<a class="font-code-sm text-code-sm text-on-surface-variant hover:text-primary hover:bg-primary-container/10 px-2 py-1 transition-all duration-300 ease-in-out" href="#">NETWORK</a>
+<a class="font-code-sm text-code-sm text-on-surface-variant hover:text-primary hover:bg-primary-container/10 px-2 py-1 transition-all duration-300 ease-in-out" href="#">LOGS</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary hover:bg-primary-container/10 p-2 rounded transition-all duration-300 ease-in-out">
+<span class="material-symbols-outlined">wifi_tethering</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary hover:bg-primary-container/10 p-2 rounded transition-all duration-300 ease-in-out">
+<span class="material-symbols-outlined">settings_input_component</span>
+</button>
+</div>
+</header>
+<!-- Main Layout Grid -->
+<main class="pt-20 pb-24 h-screen w-full flex px-gutter gap-gutter relative z-20">
+<!-- Left Sidebar: Opponent Stats & Logs -->
+<aside class="w-64 h-full flex flex-col gap-4 flex-shrink-0 hidden lg:flex">
+<!-- Opponent Integrity -->
+<div class="glass-panel p-4 flex flex-col items-center justify-center gap-4 h-1/3">
+<h2 class="font-label-caps text-label-caps text-secondary-fixed-dim uppercase tracking-widest">HOSTILE INTEGRITY</h2>
+<div class="relative w-32 h-32 flex items-center justify-center">
+<!-- Circular Progress Simulation SVG -->
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-width="2"></circle>
+<circle class="text-secondary-container shadow-[0_0_10px_#fe00fe]" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="283" stroke-dashoffset="80" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-md text-display-md text-secondary-container">72</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">%</span>
+</div>
+</div>
+<div class="flex gap-1 w-full justify-center">
+<span class="w-2 h-4 bg-secondary-container"></span>
+<span class="w-2 h-4 bg-secondary-container"></span>
+<span class="w-2 h-4 bg-surface-variant"></span>
+</div>
+</div>
+<!-- LOGS Window -->
+<div class="glass-panel flex-1 flex flex-col overflow-hidden">
+<div class="bg-surface-container-high px-4 py-2 border-b border-outline-variant flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-on-surface uppercase">SYSTEM_LOGS</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">receipt_long</span>
+</div>
+<div class="p-4 flex-1 overflow-y-auto font-code-sm text-code-sm flex flex-col gap-2" id="logContainer">
+<div class="text-on-surface-variant">&gt; INITIATING HANDSHAKE...</div>
+<div class="text-tertiary-fixed-dim">&gt; CONNECTION ESTABLISHED.</div>
+<div class="text-error">&gt; WARN: UNAUTHORIZED PROBE DETECTED.</div>
+<div class="text-secondary-container">&gt; HOSTILE DEPLOYED: ICE_WALL_v1</div>
+</div>
+</div>
+</aside>
+<!-- Center Column: The Battlefield -->
+<section class="flex-1 flex flex-col gap-4 h-full">
+<!-- Opponent's Grid (Top Third) -->
+<div class="flex-1 glass-panel relative p-4 flex items-center justify-center gap-6 overflow-hidden border-t-2 border-t-secondary-container">
+<div class="absolute top-2 left-4 font-label-caps text-label-caps text-secondary-container opacity-50">HOSTILE_NETWORK [REMOTE]</div>
+<!-- Card 1 (Hostile) -->
+<div class="w-32 h-48 glass-panel neon-border-magenta flex flex-col relative group cursor-crosshair">
+<div class="bg-secondary-container/20 border-b border-secondary-container/50 px-2 py-1 text-center font-label-caps text-label-caps text-secondary-container truncate">
+                        Null_Pointer
+                    </div>
+<div class="flex-1 p-2 flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-40" data-alt="Abstract visualization of a malicious computer virus or digital parasite, composed of sharp, aggressive geometric magenta and dark violet shapes against a pitch-black void. High contrast, neon lighting, digital brutalism aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB430qLgZ7lVqwEKbZjnhvPEfNhzTIFLmfEdvUC79xMOShNbUbfQrOhN9fT_-5v-TYp_BEiAHhGmjEyA_kLFYEe2l_AbPZEv6ntDLmkicGLs3VEtA0pd4IwTsbm0kZBTG3nI3gz_JTPblCiwURVBjF_ZkiTO-U87zA27j7cZH82cEK72SqPV_D8KYYb6cIejjpUR96nT46WuCyMPjGOpgTd58oxt04TvboMveLoUmtKM8JDYUnYslqeNw')"></div>
+<span class="material-symbols-outlined text-secondary-container text-4xl relative z-10 drop-shadow-[0_0_8px_#fe00fe]">bug_report</span>
+</div>
+<div class="border-t border-secondary-container/50 bg-surface/80 p-1 flex justify-between font-code-sm text-code-sm text-on-surface">
+<span class="text-secondary-container">A:04</span>
+<span class="text-outline">D:02</span>
+</div>
+</div>
+<!-- Card 2 (Hostile - Locked/Tapped) -->
+<div class="w-32 h-48 glass-panel border border-outline-variant flex flex-col relative tapped">
+<div class="bg-surface-variant px-2 py-1 text-center font-label-caps text-label-caps text-on-surface-variant truncate">
+                        ICE_Barrier
+                    </div>
+<div class="flex-1 p-2 flex items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant text-4xl">shield</span>
+</div>
+<div class="absolute inset-0 bg-surface/50 flex items-center justify-center backdrop-blur-sm">
+<span class="font-label-caps text-label-caps text-error bg-error-container px-2 py-1 border border-error">LOCKED</span>
+</div>
+<div class="border-t border-outline-variant bg-surface/80 p-1 flex justify-between font-code-sm text-code-sm text-on-surface-variant">
+<span>A:00</span>
+<span>D:08</span>
+</div>
+</div>
+</div>
+<!-- Execution Queue (Middle Third) -->
+<div class="h-32 glass-panel border border-outline-variant flex flex-col">
+<div class="bg-surface-container-high px-4 py-1 border-b border-outline-variant flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-on-surface">EXECUTION_STACK</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[14px]">terminal</span>
+</div>
+<div class="p-4 font-code-sm text-code-sm text-on-surface-variant overflow-hidden flex flex-col justify-end h-full">
+<div>&gt; INITIALIZING SUB-ROUTINE... <span class="text-tertiary-fixed-dim">[OK]</span></div>
+<div class="text-primary-container">&gt; EXEC: root/spells/synapse_burn.exe</div>
+<div class="text-error">&gt; STATUS: PENDING STACK RESOLUTION... <span class="blinking-cursor">_</span></div>
+</div>
+</div>
+<!-- Player's Grid (Bottom Third) -->
+<div class="flex-1 glass-panel relative p-4 flex items-center justify-center gap-6 overflow-hidden border-b-2 border-b-primary-container">
+<div class="absolute bottom-2 right-4 font-label-caps text-label-caps text-primary-container opacity-50">[LOCAL] ACTIVE_NETWORK</div>
+<!-- Card 1 (Player) -->
+<div class="w-32 h-48 glass-panel neon-border-cyan flex flex-col relative cursor-pointer hover:shadow-[0_0_15px_rgba(0,243,255,0.4)] transition-all duration-200" onclick="sendCommand('ACTIVATE', 'Data_Spike')">
+<div class="bg-primary-container/20 border-b border-primary-container/50 px-2 py-1 text-center font-label-caps text-label-caps text-primary-container truncate">
+                        Data_Spike
+                    </div>
+<div class="flex-1 p-2 flex items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-40" data-alt="A stylized digital shard or weapon, glowing with intense cyan and electric blue light, floating in a dark cyberspace environment. Sleek, glassmorphism design, high-fidelity technical aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAqL-cdywYqnvqDsRmI1ScFvGwdgryWJUpEo7a8Ta0nV8NQnn5uXAKqKmb4b4eo-UuZ2QYAeHC6SKLChD4ItLWyTqEO0sqkqRkMU6Jvq04ydTQ5pi_ANWQJREAEfYyjTTBU5lWIbVDTnsLzBns_-aCJiZXO_b_HctX13UFaa9iehXN7em4LeCUByCinp8XXioViSUHaeKORS_GQPcz5waASemWvf6VO-Zuaw5Pr01H-10Mxk9bOzjs7ow')"></div>
+<span class="material-symbols-outlined text-primary-container text-4xl relative z-10 drop-shadow-[0_0_8px_#00f3ff]">electric_bolt</span>
+</div>
+<div class="border-t border-primary-container/50 bg-surface/80 p-1 flex justify-between font-code-sm text-code-sm text-on-surface">
+<span class="text-primary-container">A:06</span>
+<span class="text-outline">D:01</span>
+</div>
+</div>
+<!-- Card 2 (Player - Booting) -->
+<div class="w-32 h-48 glass-panel border border-outline flex flex-col relative overflow-hidden">
+<div class="absolute inset-0 border-2 border-error/50 crt-flicker pointer-events-none z-20"></div>
+<div class="bg-outline/20 border-b border-outline/50 px-2 py-1 text-center font-label-caps text-label-caps text-on-surface-variant truncate">
+                        Logic_Bomb
+                    </div>
+<div class="flex-1 p-2 flex items-center justify-center relative">
+<span class="material-symbols-outlined text-outline text-4xl">memory</span>
+</div>
+<div class="absolute inset-0 bg-surface/60 flex items-center justify-center backdrop-blur-sm z-10">
+<span class="font-code-sm text-code-sm text-error bg-surface px-2 py-1 border border-error glitch-text" data-text="BOOTING...">BOOTING...</span>
+</div>
+<div class="border-t border-outline/50 bg-surface/80 p-1 flex justify-between font-code-sm text-code-sm text-on-surface-variant">
+<span>A:??</span>
+<span>D:??</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Sidebar: Player Stats & Graveyard -->
+<aside class="w-64 h-full flex flex-col gap-4 flex-shrink-0 hidden lg:flex">
+<!-- Player Integrity -->
+<div class="glass-panel p-4 flex flex-col items-center justify-center gap-4 h-1/3 border-r-2 border-primary-container">
+<h2 class="font-label-caps text-label-caps text-primary-fixed-dim uppercase tracking-widest">LOCAL INTEGRITY</h2>
+<div class="relative w-32 h-32 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle class="text-surface-variant" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-width="2"></circle>
+<circle class="text-primary-container shadow-[0_0_10px_#00f3ff]" cx="50" cy="50" fill="none" r="45" stroke="currentColor" stroke-dasharray="283" stroke-dashoffset="20" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-md text-display-md text-primary-container">94</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">%</span>
+</div>
+</div>
+<div class="flex gap-1 w-full justify-center">
+<span class="w-2 h-4 bg-primary-container"></span>
+<span class="w-2 h-4 bg-primary-container"></span>
+<span class="w-2 h-4 bg-primary-container"></span>
+<span class="w-2 h-4 bg-primary-container"></span>
+</div>
+</div>
+<!-- /dev/null (Graveyard) -->
+<div class="glass-panel flex-1 flex flex-col overflow-hidden">
+<div class="bg-surface-container-high px-4 py-2 border-b border-outline-variant flex justify-between items-center">
+<span class="font-label-caps text-label-caps text-on-surface uppercase">/DEV/NULL</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">delete_forever</span>
+</div>
+<div class="p-4 flex-1 flex flex-col gap-2 items-center justify-start overflow-y-auto">
+<!-- Discarded Card Mini -->
+<div class="w-full bg-surface-container border border-outline-variant p-2 flex items-center gap-2 opacity-50">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">api</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant flex-1 truncate">Overclock.sh</span>
+</div>
+<div class="w-full bg-surface-container border border-outline-variant p-2 flex items-center gap-2 opacity-30">
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">vpn_lock</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant flex-1 truncate">Proxy_Shield</span>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Bottom: Player's Hand (Data Cache) -->
+<div class="fixed bottom-0 left-0 w-full h-32 flex justify-center items-end pb-4 z-50 pointer-events-none">
+<div class="flex gap-2 pointer-events-auto" id="playerHand">
+<!-- Hand Card 1 -->
+<div class="w-40 h-56 glass-panel neon-border-cyan flex flex-col relative card-hover-fx transition-transform duration-300 origin-bottom bg-surface cursor-pointer" onclick="castCard(this, 'Compile_Error')">
+<div class="bg-primary-container/20 border-b border-primary-container/50 px-2 py-1 text-center font-label-caps text-label-caps text-primary-container truncate">
+                    Compile_Error
+                </div>
+<div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-primary-container text-5xl mb-2">warning</span>
+<p class="font-code-sm text-[10px] text-on-surface-variant text-center leading-tight">Force target node to reboot. Lose 2 Integrity.</p>
+</div>
+<div class="border-t border-primary-container/50 bg-surface p-1 flex justify-between font-code-sm text-code-sm text-on-surface">
+<span class="text-primary-container">[ COST: 02 ]</span>
+</div>
+</div>
+<!-- Hand Card 2 -->
+<div class="w-40 h-56 glass-panel neon-border-cyan flex flex-col relative card-hover-fx transition-transform duration-300 origin-bottom bg-surface cursor-pointer" onclick="castCard(this, 'Bandwidth_Leech')">
+<div class="bg-primary-container/20 border-b border-primary-container/50 px-2 py-1 text-center font-label-caps text-label-caps text-primary-container truncate">
+                    Bandwidth_Leech
+                </div>
+<div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden">
+<span class="material-symbols-outlined text-primary-container text-5xl mb-2">downloading</span>
+<p class="font-code-sm text-[10px] text-on-surface-variant text-center leading-tight">Draw 2 packets from Cache.</p>
+</div>
+<div class="border-t border-primary-container/50 bg-surface p-1 flex justify-between font-code-sm text-code-sm text-on-surface">
+<span class="text-primary-container">[ COST: 01 ]</span>
+</div>
+</div>
+<!-- Hand Card 3 -->
+<div class="w-40 h-56 glass-panel neon-border-cyan flex flex-col relative card-hover-fx transition-transform duration-300 origin-bottom bg-surface cursor-pointer" onclick="castCard(this, 'Rootkit.exe')">
+<div class="bg-primary-container/20 border-b border-primary-container/50 px-2 py-1 text-center font-label-caps text-label-caps text-primary-container truncate">
+                    Rootkit.exe
+                </div>
+<div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-30" data-alt="A glowing cyan digital key overlaid on a complex circuit board pattern in a dark cyber environment. High-fidelity glassmorphism style, neon accents." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCA926UmNs2SXnemZriK8xkU03N5Zh9o_FJaehiLyAvFdIAwT4mH1l-LK0Bm0Yg7HIghdKdaMjAdPGJA9zJTLoUs5njP9pVJ5Cf4cRrUHn62OTmBO1704HMb3OQHKvvhJBDG8otdVr-QRUpoxGPaOTSAW9SpMmVqDFGuNVXfNEuwxtwrySP0v9LnL1Sj-EDd8njgfeliZQlAq7n9sy3WaD8bVqsnyhP9aosiMOna0uMLgBlFCBuFhBnZw')"></div>
+<span class="material-symbols-outlined text-primary-container text-5xl mb-2 relative z-10">admin_panel_settings</span>
+<p class="font-code-sm text-[10px] text-on-surface-variant text-center leading-tight relative z-10">Bypass target ICE barrier entirely.</p>
+</div>
+<div class="border-t border-primary-container/50 bg-surface p-1 flex justify-between font-code-sm text-code-sm text-on-surface">
+<span class="text-primary-container">[ COST: 04 ]</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive Scripts -->
+<script>
+        // Simulate TCP integration hook
+        function sendCommand(action, payload) {
+            console.log(`[SYS_OUT] > ${action} :: ${payload}`);
+            
+            // Visual feedback in Execution Stack
+            const stack = document.querySelector('.blinking-cursor').parentElement;
+            stack.innerHTML = `> EXEC: ${action}_${payload} <span class="text-tertiary-fixed-dim">[OK]</span>`;
+            
+            setTimeout(() => {
+                stack.innerHTML = `> STATUS: AWAITING INPUT... <span class="blinking-cursor">_</span>`;
+            }, 2000);
+            
+            // Add to logs
+            const logContainer = document.getElementById('logContainer');
+            const newLog = document.createElement('div');
+            newLog.className = 'text-primary-container';
+            newLog.innerText = `> CMD SENT: ${action} [${payload}]`;
+            logContainer.appendChild(newLog);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Card Casting Animation
+        function castCard(element, cardName) {
+            // Apply animation class
+            element.classList.add('casting-anim');
+            
+            // Fire command
+            sendCommand('CAST', cardName);
+            
+            // Remove animation class after it completes
+            setTimeout(() => {
+                element.classList.remove('casting-anim');
+                // Simulate card moving to stack
+                element.style.transform = 'translateY(-100vh) scale(0.5)';
+                element.style.opacity = '0';
+                
+                setTimeout(() => {
+                    element.remove();
+                }, 500);
+            }, 500);
+        }
+    </script>
+</body></html>

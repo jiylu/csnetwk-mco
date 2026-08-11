@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>MTGNP Protocol v2.0 - Active Node</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: {
+            "surface": "#131313", "error": "#ffb4ab", "error-container": "#93000a",
+            "secondary-fixed-dim": "#ffabf3", "inverse-surface": "#e5e2e1",
+            "surface-variant": "#353534", "primary-container": "#00f3ff",
+            "on-primary": "#00373a", "on-error": "#690005", "on-secondary": "#5b005b",
+            "tertiary-container": "#36fd0f", "primary-fixed-dim": "#00dce6",
+            "primary": "#e3fdff", "tertiary-fixed-dim": "#2ae500",
+            "background": "#131313", "outline": "#849495", "on-surface-variant": "#b9cacb",
+            "outline-variant": "#3a494b", "surface-container-high": "#2a2a2a",
+            "on-surface": "#e5e2e1", "secondary-container": "#fe00fe"
+        }, fontFamily: { "body-md": ["JetBrains Mono"], "display-md": ["Space Mono"], "code-sm": ["JetBrains Mono"], "label-caps": ["Space Mono"] } } } }
+    </script>
+    <style>
+        .scanlines {
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px; pointer-events: none; z-index: 10;
+        }
+        .terminal-grid {
+            background-image: linear-gradient(rgba(0, 220, 230, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 220, 230, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .crt-flicker { animation: flicker 0.15s infinite; }
+        @keyframes flicker { 0% { opacity: 0.95; } 50% { opacity: 1; } 100% { opacity: 0.98; } }
+        .glass-panel { background: rgba(18, 18, 18, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(132, 148, 149, 0.3); }
+        .neon-border-cyan { border: 1px solid #00f3ff; box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2), 0 0 10px rgba(0, 243, 255, 0.2); }
+        .neon-border-magenta { border: 1px solid #fe00fe; box-shadow: inset 0 0 10px rgba(254, 0, 254, 0.2), 0 0 10px rgba(254, 0, 254, 0.2); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(18, 18, 18, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #3a494b; }
+        ::-webkit-scrollbar-thumb:hover { background: #00dce6; }
+        .card-hover-fx:hover { transform: translateY(-20px) scale(1.05); z-index: 50; }
+        .tapped { transform: rotate(90deg); opacity: 0.6; filter: grayscale(100%); }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen overflow-hidden font-body-md terminal-grid crt-flicker relative selection:bg-primary-container selection:text-on-primary">
+<div class="absolute inset-0 w-full h-full scanlines"></div>
+
+<header class="bg-surface/40 backdrop-blur-xl border-b border-outline-variant shadow-[0_0_15px_rgba(0,220,230,0.3)] fixed top-0 left-0 w-full z-50 flex justify-between items-center px-8 py-1 h-16">
+    <div class="flex items-center gap-4">
+        <span class="material-symbols-outlined text-primary">terminal</span>
+        <h1 class="font-display-md text-2xl text-primary tracking-widest uppercase">MTGNP v1.0</h1>
+        <span id="playerIDDisplay" class="font-code-sm text-xs text-secondary-container ml-4 px-2 py-1 border border-secondary-container rounded">NODE_ACTIVE: AWAITING...</span>
+    </div>
+    <div class="flex items-center gap-4" id="phaseDisplay">
+        <span class="font-code-sm text-primary">PHASE: UNKNOWN</span>
+    </div>
+</header>
+
+<main class="pt-20 pb-48 h-screen w-full flex px-4 gap-4 relative z-20">
+    <!-- Left Sidebar: Logs -->
+    <aside class="w-64 h-full flex flex-col gap-4 flex-shrink-0">
+        <div class="glass-panel flex-1 flex flex-col overflow-hidden">
+            <div class="bg-surface-container-high px-4 py-2 border-b border-outline-variant flex justify-between items-center">
+                <span class="font-label-caps text-xs text-on-surface uppercase">SYSTEM_LOGS</span>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto font-code-sm text-xs flex flex-col gap-2" id="logContainer">
+            </div>
+        </div>
+    </aside>
+
+    <!-- Center: Battlefield -->
+    <section class="flex-1 flex flex-col gap-4 h-full">
+        <!-- Opponent Grid -->
+        <div class="flex-1 glass-panel relative p-4 flex flex-wrap items-center justify-center gap-6 overflow-hidden border-t-2 border-t-secondary-container" id="oppGrid">
+            <div class="absolute top-2 left-4 font-label-caps text-xs text-secondary-container opacity-50">HOSTILE_NETWORK [REMOTE]</div>
+            <!-- Cards go here -->
+        </div>
+
+        <!-- Execution Stack -->
+        <div class="h-32 glass-panel border border-outline-variant flex flex-col">
+            <div class="bg-surface-container-high px-4 py-1 border-b border-outline-variant flex justify-between items-center">
+                <span class="font-label-caps text-xs text-on-surface">EXECUTION_STACK</span>
+            </div>
+            <div class="p-4 font-code-sm text-xs text-on-surface-variant overflow-y-auto flex flex-col gap-1 h-full" id="stackContainer">
+            </div>
+        </div>
+
+        <!-- Player Grid -->
+        <div class="flex-1 glass-panel relative p-4 flex flex-wrap items-center justify-center gap-6 overflow-hidden border-b-2 border-b-primary-container" id="playerGrid">
+            <div class="absolute bottom-2 right-4 font-label-caps text-xs text-primary-container opacity-50">[LOCAL] ACTIVE_NETWORK</div>
+            <!-- Cards go here -->
+        </div>
+    </section>
+
+    <!-- Right Sidebar: Life Totals & Zones -->
+    <aside class="w-64 h-full flex flex-col gap-2 flex-shrink-0 overflow-y-auto">
+        <!-- Opponent Life Total -->
+        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-2 border-b-2 border-secondary-container">
+            <h2 class="font-label-caps text-xs text-secondary-fixed-dim uppercase tracking-widest">OPPONENT LIFE TOTAL</h2>
+            <div class="text-4xl font-display-md text-secondary-container" id="oppLife">??</div>
+        </div>
+        <!-- Player Life Total -->
+        <div class="glass-panel p-4 flex flex-col items-center justify-center gap-2 border-b-2 border-primary-container">
+            <h2 class="font-label-caps text-xs text-primary-fixed-dim uppercase tracking-widest">YOUR LIFE TOTAL</h2>
+            <div class="text-4xl font-display-md text-primary-container" id="playerLife">??</div>
+        </div>
+        <!-- Graveyard -->
+        <div class="glass-panel flex flex-col overflow-hidden">
+            <div class="bg-surface-container-high px-3 py-1.5 border-b border-outline-variant flex justify-between items-center cursor-pointer" onclick="document.getElementById('graveyardContent').classList.toggle('hidden')">
+                <span class="font-label-caps text-xs text-on-surface uppercase">GRAVEYARD</span>
+                <span class="font-code-sm text-xs text-error" id="graveyardCount">0</span>
+            </div>
+            <div class="p-2 font-code-sm text-xs max-h-32 overflow-y-auto flex flex-col gap-1" id="graveyardContent">
+            </div>
+        </div>
+        <!-- Exile -->
+        <div class="glass-panel flex flex-col overflow-hidden">
+            <div class="bg-surface-container-high px-3 py-1.5 border-b border-outline-variant flex justify-between items-center cursor-pointer" onclick="document.getElementById('exileContent').classList.toggle('hidden')">
+                <span class="font-label-caps text-xs text-on-surface uppercase">EXILE</span>
+                <span class="font-code-sm text-xs text-outline" id="exileCount">0</span>
+            </div>
+            <div class="p-2 font-code-sm text-xs max-h-32 overflow-y-auto flex flex-col gap-1" id="exileContent">
+            </div>
+        </div>
+        <!-- Action Buttons -->
+        <div class="glass-panel flex-1 flex flex-col p-4 gap-2 justify-center" id="actionButtons">
+            <button onclick="sendCommand('ready')" class="bg-primary/20 text-primary border border-primary p-2 font-code-sm hover:bg-primary/40">READY</button>
+            <button onclick="sendCommand('keep')" class="bg-tertiary-fixed-dim/20 text-tertiary-fixed-dim border border-tertiary-fixed-dim p-2 font-code-sm hover:bg-tertiary-fixed-dim/40">KEEP HAND</button>
+            <button onclick="sendCommand('mull')" class="bg-error/20 text-error border border-error p-2 font-code-sm hover:bg-error/40">MULLIGAN</button>
+            <button onclick="sendCommand('pass')" class="bg-outline/20 text-on-surface border border-outline p-2 font-code-sm hover:bg-outline/40">PASS PRIORITY</button>
+            <button onclick="sendCommand('yes')" class="bg-primary/20 text-primary border border-primary p-2 font-code-sm hover:bg-primary/40">YES (TRIGGER)</button>
+            <button onclick="sendCommand('no')" class="bg-error/20 text-error border border-error p-2 font-code-sm hover:bg-error/40">NO (TRIGGER)</button>
+        </div>
+    </aside>
+</main>
+
+<!-- Bottom: Player Hand & Command Line -->
+<div class="fixed bottom-0 left-0 w-full flex flex-col z-50">
+    <div class="flex justify-center items-end pb-2 gap-2 h-40 pointer-events-auto" id="playerHand">
+        <!-- Hand cards go here -->
+    </div>
+    
+    <div class="bg-surface-container-high border-t border-outline-variant p-2 flex items-center">
+        <span class="font-code-sm text-primary-container mr-2">> AWAITING INPUT:</span>
+        <input type="text" id="cmdInput" class="bg-transparent border-none outline-none text-on-surface font-code-sm flex-1 focus:ring-0" placeholder="Type command here (or click cards) and press Enter...">
+    </div>
+</div>
+
+<script>
+    const cmdInput = document.getElementById('cmdInput');
+    cmdInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendCommand(cmdInput.value);
+            cmdInput.value = '';
+        }
+    });
+
+    let lastLogId = 0;  // absolute log ID (offset + index)
+    const LAND_BASES = ['mountain', 'swamp', 'plains', 'island', 'forest'];
+    
+    function formatCardName(id) {
+        let parts = id.split('_');
+        if (parts.length > 1 && !isNaN(parts[parts.length - 1])) {
+            parts.pop();
+        }
+        return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    }
+
+    function appendToCmd(text) {
+        cmdInput.value += (cmdInput.value ? ' ' : '') + text;
+        cmdInput.focus();
+    }
+
+    function createCardElement(card, type) {
+        const div = document.createElement('div');
+        let colorClass = type === 'hand' || type === 'player' ? 'neon-border-cyan text-primary-container' : 'neon-border-magenta text-secondary-container';
+        let bgClass = type === 'hand' || type === 'player' ? 'bg-primary-container/20 border-primary-container/50' : 'bg-secondary-container/20 border-secondary-container/50';
+        
+        let transformClass = '';
+        if (type !== 'hand' && card.tapped) transformClass = 'tapped';
+
+        div.className = `w-32 h-48 glass-panel ${colorClass} flex flex-col relative cursor-pointer ${transformClass}`;
+        if (type === 'hand') {
+            div.classList.add('card-hover-fx', 'transition-transform', 'origin-bottom');
+            div.onclick = () => {
+                const baseParts = card.id.split('_');
+                if (baseParts.length > 1 && !isNaN(baseParts[baseParts.length - 1])) baseParts.pop();
+                const baseName = baseParts.join('_');
+                appendToCmd(LAND_BASES.includes(baseName) ? `play ${card.id}` : `cast ${card.id}`);
+            };
+        } else {
+            div.onclick = () => appendToCmd(card.id);
+        }
+
+        let ptHtml = '';
+        if (card.power !== undefined) {
+            let dmg = card.damage ? ` (Dmg:${card.damage})` : '';
+            ptHtml = `<div class="border-t ${bgClass} bg-surface/80 p-1 flex justify-center font-code-sm text-[10px] text-on-surface">
+                        <span>A:${card.power} D:${card.toughness}${dmg}</span>
+                      </div>`;
+        }
+        
+        let sickHtml = card.summoning_sick ? `<span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[10px] bg-error text-surface px-1">SICK</span>` : '';
+
+        div.innerHTML = `
+            <div class="${bgClass} border-b px-1 py-1 text-center font-label-caps text-[10px] truncate" title="${formatCardName(card.id)}">
+                ${formatCardName(card.id)}
+            </div>
+            <div class="flex-1 p-2 flex flex-col items-center justify-center relative overflow-hidden">
+                <span class="material-symbols-outlined text-2xl opacity-80">memory</span>
+                ${sickHtml}
+            </div>
+            ${ptHtml}
+        `;
+        return div;
+    }
+
+    function sendCommand(cmdStr) {
+        fetch('/api/command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cmd: cmdStr })
+        });
+    }
+
+    async function pollState() {
+        try {
+            const res = await fetch('/api/state');
+            const data = await res.json();
+            const state = data.state;
+            const me = data.player_id;
+            let opp = null;
+            
+            document.getElementById('playerIDDisplay').innerText = `NODE_ACTIVE: ${me.toUpperCase()}`;
+            
+            let phaseText = state.phase || 'AWAITING';
+            let phaseColor = 'text-primary';
+            if (state.phase === 'LOBBY' && state.players_ready > 0) {
+                phaseText = `LOBBY (Ready: ${state.players_ready}, Waiting: ${state.waiting_for})`;
+            }
+            if (data.logs && data.logs.some(l => l.includes("connection lost"))) {
+                phaseText = 'CONNECTION LOST TO SERVER';
+                phaseColor = 'text-error bg-error-container px-2';
+            }
+            document.getElementById('phaseDisplay').innerHTML = `<span class="font-code-sm ${phaseColor}">PHASE: ${phaseText}</span>`;
+            
+            if (state.life_totals) {
+                document.getElementById('playerLife').innerText = state.life_totals[me] !== undefined ? state.life_totals[me] : '??';
+                for (let pid in state.life_totals) {
+                    if (pid !== me) opp = pid;
+                }
+                if (opp) document.getElementById('oppLife').innerText = state.life_totals[opp] !== undefined ? state.life_totals[opp] : '??';
+            }
+
+            // Render Player Grid
+            const pg = document.getElementById('playerGrid');
+            pg.innerHTML = '<div class="absolute bottom-2 right-4 font-label-caps text-xs text-primary-container opacity-50">[LOCAL] ACTIVE_NETWORK</div>';
+            if (state.battlefield && state.battlefield[me]) {
+                state.battlefield[me].forEach(c => pg.appendChild(createCardElement(c, 'player')));
+            }
+
+            // Render Opponent Grid
+            const og = document.getElementById('oppGrid');
+            og.innerHTML = '<div class="absolute top-2 left-4 font-label-caps text-xs text-secondary-container opacity-50">HOSTILE_NETWORK [REMOTE]</div>';
+            if (opp && state.battlefield && state.battlefield[opp]) {
+                state.battlefield[opp].forEach(c => og.appendChild(createCardElement(c, 'opp')));
+            }
+
+            // Render Hand
+            const hg = document.getElementById('playerHand');
+            hg.innerHTML = '';
+            if (state.hand && state.hand[me]) {
+                state.hand[me].forEach(cid => {
+                    hg.appendChild(createCardElement({id: cid}, 'hand'));
+                });
+            }
+
+            // Render Stack
+            const st = document.getElementById('stackContainer');
+            st.innerHTML = '';
+            if (state.stack) {
+                state.stack.forEach(item => {
+                    st.innerHTML = `<div>> EXEC: ${item.source} <span class="text-tertiary-fixed-dim">[PENDING]</span></div>` + st.innerHTML;
+                });
+            }
+
+            // Render Graveyard
+            const gc = document.getElementById('graveyardContent');
+            gc.innerHTML = '';
+            let graveyardTotal = 0;
+            if (state.graveyard) {
+                for (let pid in state.graveyard) {
+                    const cards = state.graveyard[pid];
+                    graveyardTotal += cards.length;
+                    const label = pid === me ? 'You' : 'Opp';
+                    cards.forEach(cid => {
+                        const d = document.createElement('div');
+                        d.className = pid === me ? 'text-primary-fixed-dim' : 'text-secondary-fixed-dim';
+                        d.innerText = `[${label}] ${formatCardName(cid)}`;
+                        gc.appendChild(d);
+                    });
+                }
+            }
+            document.getElementById('graveyardCount').innerText = graveyardTotal;
+
+            // Render Exile
+            const ec = document.getElementById('exileContent');
+            ec.innerHTML = '';
+            let exileTotal = 0;
+            if (state.exile) {
+                for (let pid in state.exile) {
+                    const cards = state.exile[pid];
+                    exileTotal += cards.length;
+                    const label = pid === me ? 'You' : 'Opp';
+                    cards.forEach(cid => {
+                        const d = document.createElement('div');
+                        d.className = 'text-outline';
+                        d.innerText = `[${label}] ${formatCardName(cid)}`;
+                        ec.appendChild(d);
+                    });
+                }
+            }
+            document.getElementById('exileCount').innerText = exileTotal;
+
+            // Render Logs (offset-based absolute ID tracking)
+            const logOffset = data.log_offset || 0;
+            if (data.logs) {
+                const lc = document.getElementById('logContainer');
+                for (let i = 0; i < data.logs.length; i++) {
+                    const absId = logOffset + i;
+                    if (absId >= lastLogId) {
+                        const ldiv = document.createElement('div');
+                        ldiv.innerText = data.logs[i];
+                        
+                        if(data.logs[i].includes('ERROR')) ldiv.className = 'text-error';
+                        else if(data.logs[i].includes('>>>')) ldiv.className = 'text-tertiary-fixed-dim';
+                        else ldiv.className = 'text-on-surface-variant';
+                        
+                        lc.appendChild(ldiv);
+                    }
+                }
+                lastLogId = logOffset + data.logs.length;
+                const lc2 = document.getElementById('logContainer');
+                lc2.scrollTop = lc2.scrollHeight;
+            }
+
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    setInterval(pollState, 500);
+</script>
+</body>
+</html>
